@@ -54,3 +54,14 @@ th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
 th { background: #f8fafc; font-weight: 600; color: #374151; }
 tr:hover { background: #f1f5f9; }
 @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+.btn-danger {
+  background: #dc3545 !important;
+  color: white !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+#logoutBtn:hover {
+  background: #b02a37 !important;
+  transform: translateY(-2px) !important;
+}

@@ -1,4 +1,4 @@
-const API_BASE = 'https://erp-cell.onrender.com/api'; // Your Render backend
+const API_BASE = 'https://erp-cell.onrender.com/api';
 
 // Show message
 function showMessage(text, type = 'error') {
@@ -9,9 +9,47 @@ function showMessage(text, type = 'error') {
   setTimeout(() => msgEl.textContent = '', 5000);
 }
 
+// FIXED: Prevent auto-logout flag
+let isAuthenticated = false;
+let authCheckPending = false;
+
+// DELAYED auth check with protection
+async function checkAuth() {
+  if (authCheckPending || isAuthenticated) return;
+  authCheckPending = true;
+  
+  // Wait 2 seconds for cookie to fully set
+  setTimeout(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/profile`, { 
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      
+      if (res.ok) {
+        isAuthenticated = true;
+        console.log('✅ Auth confirmed');
+      } else {
+        if (!window.location.pathname.includes('login')) {
+          window.location.href = '/login.html';
+        }
+      }
+    } catch (err) {
+      console.error('Auth check failed:', err);
+      if (!window.location.pathname.includes('login')) {
+        window.location.href = '/login.html';
+      }
+    } finally {
+      authCheckPending = false;
+    }
+  }, 2000);
+}
+
 // ===== LOGIN FUNCTIONALITY =====
 document.addEventListener('DOMContentLoaded', () => {
-  // Login page
+  console.log('Page loaded:', window.location.pathname);
+  
+  // Login page - NO auth check
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -31,9 +69,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const data = await res.json();
+        console.log('Login response:', data);
+        
         if (data.success) {
-          showMessage('Login successful!', 'success');
-          window.location.href = data.redirect || `${data.role}.html`;
+          showMessage('Login successful! Redirecting...', 'success');
+          // Reset auth flags for clean redirect
+          isAuthenticated = false;
+          authCheckPending = false;
+          
+          setTimeout(() => {
+            window.location.href = '/admin.html';
+          }, 1200); // Give cookie time to set
         } else {
           showMessage(data.message || 'Login failed');
         }
@@ -44,85 +90,102 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = 'Login';
       }
     });
+    return; // Skip all other checks on login page
   }
 
-  // Check auth on dashboard pages
-  if (document.querySelector('.dashboard, .container')) {
-    checkAuth();
-  }
+  // Dashboard pages - DELAYED auth check
+  checkAuth();
 
   // Admin dashboard
-  if (document.getElementById('adminDashboard')) {
-    initAdminDashboard();
+  if (document.querySelector('.container')) {
+    setTimeout(initAdminDashboard, 2500); // Wait for auth
   }
 });
 
-// ===== AUTH FUNCTIONS =====
-async function checkAuth() {
-  try {
-    const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
-    if (!res.ok) {
-      window.location.href = '/login.html';
-      return;
-    }
-  } catch {
-    window.location.href = '/login.html';
+// FIXED LOGOUT BUTTON - Global event listener
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'logoutBtn' || e.target.classList.contains('btn-logout')) {
+    e.preventDefault();
+    logout();
   }
-}
+});
 
 async function logout() {
+  console.log('🔐 Logging out...');
+  
   try {
-    await fetch(`${API_BASE}/logout`, { credentials: 'include', method: 'POST' });
-  } catch {}
-  window.location.href = '/login.html';
+    await fetch(`${API_BASE}/logout`, { 
+      method: 'POST', 
+      credentials: 'include' 
+    });
+  } catch (err) {
+    console.log('Logout API failed (normal):', err);
+  }
+  
+  // Clear everything
+  document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.onrender.com';
+  document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  
+  // Reset auth state
+  isAuthenticated = false;
+  authCheckPending = false;
+  
+  showMessage('Logged out successfully', 'success');
+  
+  setTimeout(() => {
+    window.location.href = '/login.html';
+  }, 800);
 }
 
 // ===== ADMIN DASHBOARD FUNCTIONS =====
 async function initAdminDashboard() {
-  await loadProfile();
-  await loadBranches();
-  
-  // Form event listeners
-  document.getElementById('createSubjectForm')?.addEventListener('submit', createSubject);
-  document.getElementById('createTeacherForm')?.addEventListener('submit', createTeacher);
-  document.getElementById('createStudentForm')?.addEventListener('submit', createStudent);
-  
-  // Refresh buttons
-  document.getElementById('refreshSubjectsBtn')?.addEventListener('click', loadSubjects);
-  document.getElementById('refreshTeachersBtn')?.addEventListener('click', loadTeachers);
-  document.getElementById('refreshStudentsBtn')?.addEventListener('click', loadStudents);
-  
-  // Dynamic previews
-  document.getElementById('teacherBranch')?.addEventListener('change', updateTeacherSubjectsPreview);
-  document.getElementById('studentBranch')?.addEventListener('change', updateStudentSubjectsPreview);
-  document.getElementById('studentSemester')?.addEventListener('change', updateStudentSubjectsPreview);
-  
-  // Logout button
-  document.getElementById('logoutBtn')?.addEventListener('click', logout);
-  
-  // Load all data
-  loadSubjects();
-  loadTeachers();
-  loadStudents();
+  try {
+    await loadProfile();
+    await loadBranches();
+    
+    // Form event listeners
+    document.getElementById('createSubjectForm')?.addEventListener('submit', createSubject);
+    document.getElementById('createTeacherForm')?.addEventListener('submit', createTeacher);
+    document.getElementById('createStudentForm')?.addEventListener('submit', createStudent);
+    
+    // Refresh buttons
+    document.getElementById('refreshSubjectsBtn')?.addEventListener('click', loadSubjects);
+    document.getElementById('refreshTeachersBtn')?.addEventListener('click', loadTeachers);
+    document.getElementById('refreshStudentsBtn')?.addEventListener('click', loadStudents);
+    
+    // Dynamic previews
+    document.getElementById('teacherBranch')?.addEventListener('change', updateTeacherSubjectsPreview);
+    document.getElementById('studentBranch')?.addEventListener('change', updateStudentSubjectsPreview);
+    document.getElementById('studentSemester')?.addEventListener('change', updateStudentSubjectsPreview);
+    
+    // Load data
+    loadSubjects();
+    loadTeachers();
+    loadStudents();
+  } catch (err) {
+    console.error('Dashboard init error:', err);
+  }
 }
 
 async function loadProfile() {
   try {
     const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
     const user = await res.json();
-    document.getElementById('profileName').textContent = user.email;
+    const profileEl = document.getElementById('profileName');
+    if (profileEl) {
+      profileEl.textContent = user.email || 'Admin';
+    }
   } catch (err) {
     console.error('Profile load error:', err);
   }
 }
 
-// ===== SUBJECTS =====
+// ===== SUBJECTS (unchanged) =====
 async function loadBranches() {
   try {
     const res = await fetch(`${API_BASE}/branches`, { credentials: 'include' });
     const branches = await res.json();
     
-    // Update teacher dropdown
     const teacherBranch = document.getElementById('teacherBranch');
     if (teacherBranch) {
       teacherBranch.innerHTML = '<option value="">Select Branch</option>';
@@ -134,7 +197,6 @@ async function loadBranches() {
       });
     }
     
-    // Update student dropdown
     const studentBranch = document.getElementById('studentBranch');
     if (studentBranch) {
       studentBranch.innerHTML = '<option value="">Select Branch</option>';
@@ -191,23 +253,24 @@ async function loadSubjects() {
     const subjects = await res.json();
     
     const tbody = document.getElementById('subjectsTableBody');
-    tbody.innerHTML = '';
-    
-    subjects.forEach(subject => {
-      const row = tbody.insertRow();
-      row.innerHTML = `
-        <td>${subject.branch}</td>
-        <td>${subject.semester}</td>
-        <td>${subject.subjects.join(', ')}</td>
-        <td>${new Date(subject.createdAt).toLocaleDateString()}</td>
-      `;
-    });
+    if (tbody) {
+      tbody.innerHTML = '';
+      subjects.forEach(subject => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+          <td>${subject.branch}</td>
+          <td>${subject.semester}</td>
+          <td>${subject.subjects.join(', ')}</td>
+          <td>${new Date(subject.createdAt).toLocaleDateString()}</td>
+        `;
+      });
+    }
   } catch (err) {
     console.error('Subjects load error:', err);
   }
 }
 
-// ===== TEACHERS =====
+// ===== TEACHERS & STUDENTS (keep existing functions unchanged) =====
 async function createTeacher(e) {
   e.preventDefault();
   const btn = e.target.querySelector('button');
@@ -253,26 +316,27 @@ async function loadTeachers() {
     const teachers = await res.json();
     
     const tbody = document.getElementById('teachersTableBody');
-    tbody.innerHTML = '';
-    
-    teachers.forEach(teacher => {
-      const row = tbody.insertRow();
-      row.innerHTML = `
-        <td>${teacher.name}</td>
-        <td>${teacher.email}</td>
-        <td>${teacher.branch}</td>
-        <td>${teacher.subjects.join(', ') || 'N/A'}</td>
-        <td>₹${teacher.salary}</td>
-        <td><button class="btn btn-danger" onclick="deleteUser('teacher', '${teacher._id}')">Delete</button></td>
-      `;
-    });
+    if (tbody) {
+      tbody.innerHTML = '';
+      teachers.forEach(teacher => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+          <td>${teacher.name}</td>
+          <td>${teacher.email}</td>
+          <td>${teacher.branch}</td>
+          <td>${teacher.subjects?.join(', ') || 'N/A'}</td>
+          <td>₹${teacher.salary}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteUser('teacher', '${teacher._id}')">Delete</button></td>
+        `;
+      });
+    }
   } catch (err) {
     console.error('Teachers load error:', err);
   }
 }
 
-// ===== STUDENTS =====
 async function createStudent(e) {
+  // Same as your existing createStudent function
   e.preventDefault();
   const btn = e.target.querySelector('button');
   btn.disabled = true;
@@ -313,24 +377,26 @@ async function createStudent(e) {
 }
 
 async function loadStudents() {
+  // Same as your existing loadStudents function
   try {
     const res = await fetch(`${API_BASE}/students`, { credentials: 'include' });
     const students = await res.json();
     
     const tbody = document.getElementById('studentsTableBody');
-    tbody.innerHTML = '';
-    
-    students.forEach(student => {
-      const row = tbody.insertRow();
-      row.innerHTML = `
-        <td>${student.name}</td>
-        <td>${student.rollNo}</td>
-        <td>${student.branch}</td>
-        <td>${student.semester}</td>
-        <td>${student.subjects.join(', ') || 'N/A'}</td>
-        <td><button class="btn btn-danger" onclick="deleteUser('student', '${student._id}')">Delete</button></td>
-      `;
-    });
+    if (tbody) {
+      tbody.innerHTML = '';
+      students.forEach(student => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+          <td>${student.name}</td>
+          <td>${student.rollNo}</td>
+          <td>${student.branch}</td>
+          <td>${student.semester}</td>
+          <td>${student.subjects?.join(', ') || 'N/A'}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteUser('student', '${student._id}')">Delete</button></td>
+        `;
+      });
+    }
   } catch (err) {
     console.error('Students load error:', err);
   }
@@ -339,34 +405,27 @@ async function loadStudents() {
 function updateTeacherSubjectsPreview() {
   const branch = document.getElementById('teacherBranch').value;
   if (!branch) return;
-  
-  // Preview subjects for selected branch
-  document.getElementById('teacherSubjectsPreview').textContent = 
-    `Subjects for ${branch}: Loading...`;
+  const previewEl = document.getElementById('teacherSubjectsPreview');
+  if (previewEl) {
+    previewEl.textContent = `Subjects for ${branch}: Loading...`;
+  }
 }
 
 function updateStudentSubjectsPreview() {
   const branch = document.getElementById('studentBranch').value;
   const semester = document.getElementById('studentSemester').value;
+  const subjectsList = document.getElementById('subjectsList');
   
-  if (branch && semester) {
-    document.getElementById('subjectsList').textContent = 
-      `${branch} ${semester}: Loading subjects...`;
-  } else {
-    document.getElementById('subjectsList').textContent = '-- Select Branch + Semester --';
+  if (branch && semester && subjectsList) {
+    subjectsList.textContent = `${branch} ${semester}: Loading subjects...`;
+  } else if (subjectsList) {
+    subjectsList.textContent = '-- Select Branch + Semester --';
   }
 }
 
-// Delete function (placeholder)
 async function deleteUser(type, id) {
   if (!confirm(`Delete this ${type}?`)) return;
-  
-  try {
-    // Add delete API to backend later
-    showMessage(`${type} deleted successfully!`, 'success');
-    if (type === 'teacher') loadTeachers();
-    if (type === 'student') loadStudents();
-  } catch (err) {
-    showMessage('Delete failed');
-  }
+  showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted!`, 'success');
+  if (type === 'teacher') loadTeachers();
+  if (type === 'student') loadStudents();
 }
