@@ -152,32 +152,54 @@ async function updateTeacherSubjectsPreview() {
 }
 
 // 🔥 STUDENT CASCADE - Branch → Semesters → Subjects
+// 🔥 FIXED: Student Branch → Semesters AUTO-LOAD
 async function updateStudentSemesters(branch) {
   const semesterSelect = document.getElementById('studentSemester');
-  if (!semesterSelect) return;
+  if (!semesterSelect || !branch) return;
   
   semesterSelect.disabled = true;
   semesterSelect.innerHTML = '<option value="">⏳ Loading semesters...</option>';
   
   try {
+    console.log('🔍 Fetching semesters for branch:', branch);
+    
+    // Get ALL subjects for this branch
     const res = await fetch(`${API_BASE}/subjects/${branch}`, { credentials: 'include' });
     const data = await res.json();
+    console.log('📚 Raw API data:', data);
     
+    // Extract UNIQUE semesters from your API response
     const semesters = [...new Set(data.map(item => item.semester))];
+    console.log('✅ Unique semesters found:', semesters);
     
+    // CLEAR and populate dropdown
     semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+    
     semesters.forEach(semester => {
+      // API: "1st Semester" → Dropdown: value="1st" text="1st Semester"
+      const frontendValue = semester.replace(' Semester', ''); // "1st Semester" → "1st"
+      
       const option = document.createElement('option');
-      option.value = semester.replace(' Semester', '');
-      option.textContent = semester;
+      option.value = frontendValue;        // value="1st"
+      option.textContent = semester;       // display: "1st Semester"
       semesterSelect.appendChild(option);
     });
     
     semesterSelect.disabled = false;
+    
+    if (semesters.length === 0) {
+      semesterSelect.innerHTML = '<option value="">No semesters found</option>';
+    }
+    
+    console.log('✅ Semesters populated:', semesterSelect.options.length - 1);
+    
   } catch (err) {
+    console.error('❌ Semester load ERROR:', err);
     semesterSelect.innerHTML = '<option value="">Error loading semesters</option>';
+    semesterSelect.disabled = false;
   }
 }
+
 
 async function updateStudentSubjectsPreview() {
   const branch = document.getElementById('studentBranch')?.value;
