@@ -407,16 +407,74 @@ async function loadStudentsTable() {
     console.error('Students table error:', err);
   }
 }
+// 🔥 FIXED DELETE - Handles 404 gracefully
+async function deleteStudent(id) {
+  if (!confirm('Delete this student?')) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/students/${id}`, { 
+      method: 'DELETE', 
+      credentials: 'include' 
+    });
+    
+    if (res.ok) {
+      loadStudentsTable();
+      showMessage('✅ Student deleted!', 'success');
+    } else if (res.status === 404) {
+      showMessage('⚠️ Student already deleted or not found', 'info');
+      loadStudentsTable(); // Refresh table anyway
+    } else {
+      showMessage(`❌ Delete failed: ${res.status}`, 'error');
+    }
+  } catch (err) {
+    showMessage('❌ Network error', 'error');
+    console.error('Delete error:', err);
+  }
+}
 
-// 🔥 DELETE FUNCTIONS
+async function deleteTeacher(id) {
+  if (!confirm('Delete this teacher?')) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/teachers/${id}`, { 
+      method: 'DELETE', 
+      credentials: 'include' 
+    });
+    
+    if (res.ok) {
+      loadTeachersTable();
+      showMessage('✅ Teacher deleted!', 'success');
+    } else if (res.status === 404) {
+      showMessage('⚠️ Teacher already deleted or not found', 'info');
+      loadTeachersTable();
+    } else {
+      showMessage(`❌ Delete failed: ${res.status}`, 'error');
+    }
+  } catch (err) {
+    showMessage('❌ Network error', 'error');
+  }
+}
+
 async function deleteSubject(id) {
   if (!confirm('Delete this subject entry?')) return;
+  
   try {
-    await fetch(`${API_BASE}/subjects/${id}`, { method: 'DELETE', credentials: 'include' });
-    loadSubjectsTable();
-    showMessage('Subject deleted successfully!', 'success');
+    const res = await fetch(`${API_BASE}/subjects/${id}`, { 
+      method: 'DELETE', 
+      credentials: 'include' 
+    });
+    
+    if (res.ok) {
+      loadSubjectsTable();
+      showMessage('✅ Subject deleted!', 'success');
+    } else if (res.status === 404) {
+      showMessage('⚠️ Subject already deleted or not found', 'info');
+      loadSubjectsTable();
+    } else {
+      showMessage(`❌ Delete failed: ${res.status}`, 'error');
+    }
   } catch (err) {
-    showMessage('Delete failed!', 'error');
+    showMessage('❌ Network error', 'error');
   }
 }
 
@@ -431,16 +489,6 @@ async function deleteTeacher(id) {
   }
 }
 
-async function deleteStudent(id) {
-  if (!confirm('Delete this student?')) return;
-  try {
-    await fetch(`${API_BASE}/students/${id}`, { method: 'DELETE', credentials: 'include' });
-    loadStudentsTable();
-    showMessage('Student deleted!', 'success');
-  } catch (err) {
-    showMessage('Delete failed!', 'error');
-  }
-}
 
 // 🔥 FORM SUBMISSIONS
 async function createSubject(e) {
