@@ -65,7 +65,7 @@ const studentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const Student = mongoose.model('Student', studentSchema);
-// Add this schema BEFORE routes
+
 const classSchema = new mongoose.Schema({
   name: { type: String, required: true },
   branch: { type: String, required: true },
@@ -75,7 +75,6 @@ const classSchema = new mongoose.Schema({
 });
 const Class = mongoose.model('Class', classSchema);
 
-// FIXED createAdmin FUNCTION - MOVED UP
 async function createAdmin() {
   try {
     const adminExists = await User.findOne({ role: 'admin' });
@@ -86,16 +85,15 @@ async function createAdmin() {
         password: hashed, 
         role: 'admin' 
       });
-      console.log('Default admin created: admin@collegeerp.com / admin123');
+      console.log('✅ Default admin created: admin@collegeerp.com / admin123');
     } else {
-      console.log('Admin already exists');
+      console.log('✅ Admin already exists');
     }
   } catch (err) {
-    console.error('Admin creation error:', err.message);
+    console.error('❌ Admin creation error:', err.message);
   }
 }
 
-// FIXED Auth middleware - ASYNC
 const auth = async (req, res, next) => {
   try {
     const token = req.cookies.token;
@@ -107,25 +105,24 @@ const auth = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    console.error('Auth error:', err.message);
+    console.error('❌ Auth error:', err.message);
     return res.status(403).json({ message: 'Invalid token' });
   }
 };
 
-// FIXED MongoDB - NO DEPRECATED OPTIONS
 let mongoReady = false;
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('MongoDB connected successfully');
+    console.log('✅ MongoDB connected successfully');
     mongoReady = true;
   })
   .catch(err => {
-    console.error('MongoDB connection FAILED:', err.message);
+    console.error('❌ MongoDB connection FAILED:', err.message);
     process.exit(1);
   });
 
-// ===== ROUTES =====
-// Health check FIRST
+// ===== ROUTES - CRITICAL ORDER =====
+// 1. Health check FIRST
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK',
@@ -134,11 +131,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// LOGIN - Most critical
-// FIXED LOGIN - Check ALL user types
+// 2. LOGIN
 app.post('/api/login', async (req, res) => {
   try {
-    console.log('LOGIN attempt:', req.body.email);
+    console.log('🔐 LOGIN attempt:', req.body.email);
     
     if (!mongoReady) {
       return res.status(503).json({ message: 'Database not ready' });
@@ -150,7 +146,6 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password required' });
     }
 
-    // ✅ FIXED: Check ALL 3 collections
     let user = await User.findOne({ email: email.toLowerCase() });
     let userType = 'admin';
     
@@ -165,7 +160,7 @@ app.post('/api/login', async (req, res) => {
     }
     
     if (!user || !await bcrypt.compare(password, user.password)) {
-      console.log('Invalid credentials for:', email);
+      console.log('❌ Invalid credentials for:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -182,7 +177,7 @@ app.post('/api/login', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    console.log('LOGIN SUCCESS:', userType, email);
+    console.log('✅ LOGIN SUCCESS:', userType, email);
     res.json({ 
       success: true, 
       user: {
@@ -195,25 +190,22 @@ app.post('/api/login', async (req, res) => {
     });
     
   } catch (err) {
-    console.error('LOGIN ERROR:', err);
+    console.error('❌ LOGIN ERROR:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// FIXED PROFILE - Return correct user data
+// 3. PROFILE
 app.get('/api/profile', auth, async (req, res) => {
   try {
     let user;
     
-    // Check Teacher first
     if (req.user.type === 'teacher' || req.user.role === 'teacher') {
       user = await Teacher.findById(req.user.id).select('-password');
     } 
-    // Check Student
     else if (req.user.type === 'student' || req.user.role === 'student') {
       user = await Student.findById(req.user.id).select('-password');
     } 
-    // Check Admin
     else {
       user = await User.findById(req.user.id).select('-password');
     }
@@ -222,68 +214,43 @@ app.get('/api/profile', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Add role for consistency
     user.role = req.user.role || req.user.type;
-    
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Profile error' });
   }
 });
 
-
-app.post('/api/logout', (req, res) => {
-  res.clearCookie('token');
-  res.clearCookie('token', { path: '/' });
-  res.json({ success: true });
-});
-
-// ===== ADMIN ROUTES =====
-// 🔥 TEACHER ROUTES - Role-based access
-app.get('/api/branches', auth, async (req, res) => {
+// 🔥 4. CRITICAL: SUBJECTS BY BRANCH/SEMESTER - FIXED POSITION
+app.get('/api/subjects/:branch/:semester?', auth, async (req, res) => {
   try {
-    // ✅ Allow teachers + admin
-    if (req.user.role !== 'admin' && req.user.type !== 'teacher') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    console.log('🔍 Subjects API called:', req.params);
     
-    const branches = await Subject.distinct('branch');
-    res.json(branches || []);
+    const { branch, semester } = req.params;
+    let query = { branch };
+    
+    if (semester) query.semester = semester;
+    
+    console.log('🔍 Querying subjects:', query);
+    
+    const subjectsData = await Subject.find(query);
+    const allSubjects = subjectsData.flatMap(s => s.subjects || []);
+    
+    console.log('✅ Found subjects:', allSubjects.length, 'for', branch);
+    
+    res.json({
+      branch,
+      semester: semester || 'All',
+      subjects: [...new Set(allSubjects)], 
+      count: allSubjects.length
+    });
   } catch (err) {
+    console.error('❌ Subjects API ERROR:', err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// 🔥 CLASSES ROUTES - Teacher access
-app.get('/api/classes', auth, async (req, res) => {
-  try {
-    // ✅ Allow teachers
-    if (req.user.role !== 'admin' && req.user.type !== 'teacher') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-    
-    const classes = await Class.find({}).sort({ createdAt: -1 });
-    res.json(classes || []);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-app.post('/api/classes', auth, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin' && req.user.type !== 'teacher') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-    
-    const { name, branch } = req.body;
-    const newClass = new Class({ name, branch });
-    await newClass.save();
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
+// 5. All subjects list (admin)
 app.get('/api/subjects', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -294,6 +261,7 @@ app.get('/api/subjects', auth, async (req, res) => {
   }
 });
 
+// 6. Create subjects
 app.post('/api/subjects', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -304,13 +272,45 @@ app.post('/api/subjects', auth, async (req, res) => {
     
     const subjectData = new Subject({ branch, semester, subjects: subjectList });
     await subjectData.save();
+    console.log('✅ New subjects created:', branch, semester);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// FIXED TEACHERS - Handle setDefaultPassword
+// 7. Branches list
+app.get('/api/branches', auth, async (req, res) => {
+  try {
+    const branches = await Subject.distinct('branch');
+    res.json(branches || []);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 8. Classes
+app.get('/api/classes', auth, async (req, res) => {
+  try {
+    const classes = await Class.find({}).sort({ createdAt: -1 });
+    res.json(classes || []);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/classes', auth, async (req, res) => {
+  try {
+    const { name, branch } = req.body;
+    const newClass = new Class({ name, branch });
+    await newClass.save();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// TEACHERS
 app.post('/api/teachers', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -342,28 +342,6 @@ app.post('/api/teachers', auth, async (req, res) => {
   }
 });
 
-app.put('/api/teachers/:id', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  try {
-    const { name, email, password, branch, salary } = req.body;
-    
-    const updateData = { name, branch, salary };
-    if (email) updateData.email = email.toLowerCase();
-    if (password) updateData.password = await bcrypt.hash(password, 12);
-    
-    if (branch) {
-      updateData.subjects = await Subject.findOne({ branch, semester: '1st' })?.subjects || [];
-    }
-    
-    const teacher = await Teacher.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
-    
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
 app.get('/api/teachers', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -374,17 +352,7 @@ app.get('/api/teachers', auth, async (req, res) => {
   }
 });
 
-app.delete('/api/teachers/:id', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  try {
-    await Teacher.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// FIXED STUDENTS - Handle setDefaultPassword
+// STUDENTS
 app.post('/api/students', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -417,28 +385,6 @@ app.post('/api/students', auth, async (req, res) => {
   }
 });
 
-app.put('/api/students/:id', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  try {
-    const { name, email, password, rollNo, branch, semester } = req.body;
-    
-    const updateData = { name, rollNo, branch, semester };
-    if (email) updateData.email = email.toLowerCase();
-    if (password) updateData.password = await bcrypt.hash(password, 12);
-    
-    if (branch && semester) {
-      updateData.subjects = await Subject.findOne({ branch, semester })?.subjects || [];
-    }
-    
-    const student = await Student.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!student) return res.status(404).json({ message: 'Student not found' });
-    
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
 app.get('/api/students', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -449,44 +395,14 @@ app.get('/api/students', auth, async (req, res) => {
   }
 });
 
-app.delete('/api/students/:id', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  try {
-    await Student.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-// 🔥 CRITICAL: Subjects by branch/semester API - MUST BE BEFORE 404 handler
-app.get('/api/subjects/:branch/:semester?', auth, async (req, res) => {
-  try {
-    console.log('🔍 Subjects API called:', req.params); // DEBUG LOG
-    
-    const { branch, semester } = req.params;
-    let query = { branch };
-    
-    if (semester) query.semester = semester;
-    
-    console.log('🔍 Querying subjects:', query); // DEBUG LOG
-    
-    const subjectsData = await Subject.find(query);
-    const allSubjects = subjectsData.flatMap(s => s.subjects || []);
-    
-    console.log('✅ Found subjects:', allSubjects.length, 'for', branch); // DEBUG LOG
-    
-    res.json({
-      branch,
-      semester: semester || 'All',
-      subjects: [...new Set(allSubjects)], // Remove duplicates
-      count: allSubjects.length
-    });
-  } catch (err) {
-    console.error('❌ Subjects API ERROR:', err);
-    res.status(500).json({ message: err.message });
-  }
+// Logout
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('token');
+  res.clearCookie('token', { path: '/' });
+  res.json({ success: true });
 });
 
+// Delete routes (admin only)
 app.delete('/api/subjects/:id', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -497,18 +413,16 @@ app.delete('/api/subjects/:id', auth, async (req, res) => {
   }
 });
 
-// 404 handler
+// 404 handler - LAST
 app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// FIXED Server Start - NO ERRORS
 const startServer = async () => {
   try {
-    // Wait max 30 seconds for MongoDB
     let attempts = 0;
     while (!mongoReady && attempts < 30) {
-      console.log(`Waiting for MongoDB... (${attempts + 1}/30)`);
+      console.log(`⏳ Waiting for MongoDB... (${attempts + 1}/30)`);
       await new Promise(resolve => setTimeout(resolve, 1000));
       attempts++;
     }
@@ -517,20 +431,19 @@ const startServer = async () => {
       throw new Error('MongoDB connection timeout');
     }
     
-    // CREATE ADMIN - NOW DEFINED
     await createAdmin();
     
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\nServer running on port ${PORT}`);
-      console.log(`Health: https://erp-cell.onrender.com/api/health`);
-      console.log(`Login: admin@collegeerp.com / admin123`);
-      console.log(`All APIs ready!`);
+      console.log(`\n🚀 Server running on port ${PORT}`);
+      console.log(`✅ Health: https://erp-cell.onrender.com/api/health`);
+      console.log(`🔐 Login: admin@collegeerp.com / admin123`);
+      console.log(`📚 Subjects API: /api/subjects/CSE/1st ✅`);
+      console.log(`🎉 All APIs ready!`);
     });
   } catch (err) {
-    console.error('Server start failed:', err.message);
+    console.error('❌ Server start failed:', err.message);
     process.exit(1);
   }
 };
 
-// Start when file loaded
 startServer();
