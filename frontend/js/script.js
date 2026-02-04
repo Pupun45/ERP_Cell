@@ -297,15 +297,44 @@ async function loadTeachersTable() {
         <td>${t.subjects?.slice(0, 2).join(', ') || 'N/A'}</td>
         <td>₹${t.salary || 0}</td>
         <td>
-          <button class="btn-warning btn-secondary me-1" onclick="editTeacher('${t._id}', ${JSON.stringify(t).replace(/"/g, '&quot;')})">Edit</button>
-          <button class="btn-danger btn-secondary" onclick="deleteTeacher('${t._id}')">Delete</button>
+          <button class="btn-warning btn-secondary me-1 edit-teacher" 
+                  data-id="${t._id}"
+                  data-name="${t.name}"
+                  data-email="${t.email}"
+                  data-branch="${t.branch}"
+                  data-salary="${t.salary}">Edit</button>
+          <button class="btn-danger btn-secondary delete-teacher" 
+                  data-id="${t._id}">Delete</button>
         </td>
       </tr>
     `).join('') || '<tr><td colspan="6" style="text-align: center;">No teachers</td></tr>';
+
+    // 🔥 ADD EVENT LISTENERS AFTER TABLE RENDER
+    document.querySelectorAll('.edit-teacher').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const teacherData = {
+          name: this.dataset.name,
+          email: this.dataset.email,
+          branch: this.dataset.branch,
+          salary: this.dataset.salary
+        };
+        editTeacher(id, teacherData);
+      });
+    });
+
+    document.querySelectorAll('.delete-teacher').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        deleteTeacher(id);
+      });
+    });
+
   } catch (err) {
     console.error('Teachers table error:', err);
   }
 }
+
 
 async function loadStudentsTable() {
   try {
@@ -322,15 +351,46 @@ async function loadStudentsTable() {
         <td>${s.semester}</td>
         <td>${s.subjects?.slice(0, 2).join(', ') || 'N/A'}</td>
         <td>
-          <button class="btn-warning btn-secondary me-1" onclick="editStudent('${s._id}', ${JSON.stringify(s).replace(/"/g, '&quot;')})">Edit</button>
-          <button class="btn-danger btn-secondary" onclick="deleteStudent('${s._id}')">Delete</button>
+          <button class="btn-warning btn-secondary me-1 edit-student" 
+                  data-id="${s._id}"
+                  data-name="${s.name}"
+                  data-email="${s.email}"
+                  data-rollno="${s.rollNo}"
+                  data-branch="${s.branch}"
+                  data-semester="${s.semester}">Edit</button>
+          <button class="btn-danger btn-secondary delete-student" 
+                  data-id="${s._id}">Delete</button>
         </td>
       </tr>
     `).join('') || '<tr><td colspan="6" style="text-align: center;">No students</td></tr>';
+
+    // 🔥 ADD EVENT LISTENERS
+    document.querySelectorAll('.edit-student').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const studentData = {
+          name: this.dataset.name,
+          email: this.dataset.email,
+          rollNo: this.dataset.rollno,
+          branch: this.dataset.branch,
+          semester: this.dataset.semester
+        };
+        editStudent(id, studentData);
+      });
+    });
+
+    document.querySelectorAll('.delete-student').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        deleteStudent(id);
+      });
+    });
+
   } catch (err) {
     console.error('Students table error:', err);
   }
 }
+
 
 // 🔥 FIXED DELETE FUNCTIONS - 404-PROOF
 async function deleteStudent(id) {
