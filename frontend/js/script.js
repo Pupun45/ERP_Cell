@@ -408,6 +408,7 @@ async function loadStudentsTable() {
   }
 }
 // 🔥 FIXED DELETE - Handles 404 gracefully
+// 🔥 FIXED DELETE FUNCTIONS - Remove DUPLICATES
 async function deleteStudent(id) {
   if (!confirm('Delete this student?')) return;
   
@@ -420,15 +421,16 @@ async function deleteStudent(id) {
     if (res.ok) {
       loadStudentsTable();
       showMessage('✅ Student deleted!', 'success');
+      cancelEdit(); // 🔥 RESET edit state
     } else if (res.status === 404) {
-      showMessage('⚠️ Student already deleted or not found', 'info');
-      loadStudentsTable(); // Refresh table anyway
+      showMessage('⚠️ Student already deleted', 'info');
+      loadStudentsTable();
+      cancelEdit(); // 🔥 RESET edit state
     } else {
       showMessage(`❌ Delete failed: ${res.status}`, 'error');
     }
   } catch (err) {
     showMessage('❌ Network error', 'error');
-    console.error('Delete error:', err);
   }
 }
 
@@ -444,9 +446,11 @@ async function deleteTeacher(id) {
     if (res.ok) {
       loadTeachersTable();
       showMessage('✅ Teacher deleted!', 'success');
+      cancelEdit(); // 🔥 RESET edit state
     } else if (res.status === 404) {
-      showMessage('⚠️ Teacher already deleted or not found', 'info');
+      showMessage('⚠️ Teacher already deleted', 'info');
       loadTeachersTable();
+      cancelEdit(); // 🔥 RESET edit state
     } else {
       showMessage(`❌ Delete failed: ${res.status}`, 'error');
     }
@@ -467,9 +471,11 @@ async function deleteSubject(id) {
     if (res.ok) {
       loadSubjectsTable();
       showMessage('✅ Subject deleted!', 'success');
+      cancelEdit(); // 🔥 RESET edit state
     } else if (res.status === 404) {
-      showMessage('⚠️ Subject already deleted or not found', 'info');
+      showMessage('⚠️ Subject already deleted', 'info');
       loadSubjectsTable();
+      cancelEdit(); // 🔥 RESET edit state
     } else {
       showMessage(`❌ Delete failed: ${res.status}`, 'error');
     }
@@ -478,14 +484,120 @@ async function deleteSubject(id) {
   }
 }
 
-async function deleteTeacher(id) {
-  if (!confirm('Delete this teacher?')) return;
+// 🔥 FIXED FORM SUBMISSIONS - Check 404 before UPDATE
+async function createTeacher(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  
   try {
-    await fetch(`${API_BASE}/teachers/${id}`, { method: 'DELETE', credentials: 'include' });
-    loadTeachersTable();
-    showMessage('Teacher deleted!', 'success');
+    const formData = {
+      name: document.getElementById('teacherName').value,
+      email: document.getElementById('teacherEmail').value,
+      setDefaultPassword: true,
+      branch: document.getElementById('teacherBranch').value,
+      salary: parseInt(document.getElementById('teacherSalary').value) || 0
+    };
+    
+    let url = `${API_BASE}/teachers`;
+    let method = 'POST';
+    
+    // 🔥 CHECK IF EDITING DELETED ITEM
+    if (editingType === 'teacher' && editingId) {
+      // First verify item exists
+      const checkRes = await fetch(`${API_BASE}/teachers/${editingId}`, { credentials: 'include' });
+      if (!checkRes.ok) {
+        showMessage('⚠️ Item was deleted. Start fresh.', 'info');
+        cancelEdit();
+        btn.disabled = false;
+        return;
+      }
+      url = `${API_BASE}/teachers/${editingId}`;
+      method = 'PUT';
+      formData.password = document.getElementById('teacherPassword').value || undefined;
+    }
+
+    const res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(formData)
+    });
+
+    const data = await res.json();
+    if (data.success || res.ok) {
+      const msg = editingId ? '✅ Teacher updated!' : '✅ Teacher created! Default password: teacher123';
+      showMessage(msg, 'success');
+      e.target.reset();
+      editingId = null;
+      editingType = null;
+      btn.textContent = 'Create Teacher';
+      loadTeachersTable();
+    } else {
+      showMessage(data.message || 'Failed to save teacher', 'error');
+    }
   } catch (err) {
-    showMessage('Delete failed!', 'error');
+    showMessage('❌ Network error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function createStudent(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  
+  try {
+    const formData = {
+      name: document.getElementById('studentName').value,
+      email: document.getElementById('studentEmail').value,
+      setDefaultPassword: true,
+      rollNo: document.getElementById('studentRollNo').value,
+      branch: document.getElementById('studentBranch').value,
+      semester: document.getElementById('studentSemester').value
+    };
+    
+    let url = `${API_BASE}/students`;
+    let method = 'POST';
+    
+    // 🔥 CHECK IF EDITING DELETED ITEM
+    if (editingType === 'student' && editingId) {
+      const checkRes = await fetch(`${API_BASE}/students/${editingId}`, { credentials: 'include' });
+      if (!checkRes.ok) {
+        showMessage('⚠️ Item was deleted. Start fresh.', 'info');
+        cancelEdit();
+        btn.disabled = false;
+        return;
+      }
+      url = `${API_BASE}/students/${editingId}`;
+      method = 'PUT';
+      formData.password = document.getElementById('studentPassword').value || undefined;
+    }
+
+    const res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(formData)
+    });
+
+    const data = await res.json();
+    if (data.success || res.ok) {
+      const msg = editingId ? '✅ Student updated!' : '✅ Student created! Default password: student123';
+      showMessage(msg, 'success');
+      e.target.reset();
+      editingId = null;
+      editingType = null;
+      btn.textContent = 'Create Student';
+      loadStudentsTable();
+    } else {
+      showMessage(data.message || 'Failed to save student', 'error');
+    }
+  } catch (err) {
+    showMessage('❌ Network error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
