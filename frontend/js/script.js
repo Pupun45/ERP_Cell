@@ -11,9 +11,7 @@ const SEMESTER_MAP = {
 // Show message - UNIVERSAL
 function showMessage(text, type = 'error') {
   let msgEl = document.getElementById('message');
-  if (!msgEl) {
-    msgEl = document.querySelector('.message');
-  }
+  if (!msgEl) msgEl = document.querySelector('.message');
   if (!msgEl) return;
   
   msgEl.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
@@ -30,39 +28,6 @@ window.authCheckDisabled = false;
 let editingId = null;
 let editingType = null;
 
-// PERFECT auth check - NO auto-logout EVER
-async function checkAuth() {
-  if (window.recentlyLoggedIn) {
-    console.log('Auth check SKIPPED - recent login');
-    return true;
-  }
-  if (window.authCheckDisabled) return true;
-  
-  console.log('Running auth check...');
-  try {
-    const res = await fetch(`${API_BASE}/profile`, { 
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
-    });
-    console.log('Profile response:', res.status);
-    if (res.ok) {
-      const user = await res.json();
-      console.log('Auth OK:', user.email, 'Role:', user.role);
-      return true;
-    } else {
-      console.log('Auth failed:', res.status);
-      return false;
-    }
-  } catch (err) {
-    console.log('Network error - staying logged in:', err.message);
-    return true;
-  }
-}
-
 // DASHBOARD DETECTION
 function detectDashboardType() {
   const path = window.location.pathname;
@@ -78,7 +43,6 @@ async function loadBranches() {
     const res = await fetch(`${API_BASE}/branches`, { credentials: 'include' });
     const branches = await res.json();
     
-    // Admin: Teacher + Student forms
     const teacherBranch = document.getElementById('teacherBranch');
     const studentBranch = document.getElementById('studentBranch');
     const classBranch = document.getElementById('classBranch');
@@ -97,27 +61,13 @@ async function loadBranches() {
       }
     });
     
-    // Subject input autocomplete
-    if (subjectBranch && !subjectBranch.hasAttribute('data-loaded')) {
-      subjectBranch.setAttribute('list', 'branch-list');
-      const datalist = document.createElement('datalist');
-      datalist.id = 'branch-list';
-      branches.forEach(branch => {
-        const option = document.createElement('option');
-        option.value = branch;
-        datalist.appendChild(option);
-      });
-      document.body.appendChild(datalist);
-      subjectBranch.setAttribute('data-loaded', 'true');
-    }
-    
     console.log('✅ Branches auto-loaded:', branches);
   } catch (err) {
     console.error('❌ Branches load failed:', err);
   }
 }
 
-// 🔥 TEACHER SUBJECTS PREVIEW - 1st Semester Auto-load
+// 🔥 TEACHER SUBJECTS PREVIEW
 async function updateTeacherSubjectsPreview() {
   const branch = document.getElementById('teacherBranch')?.value;
   const previewEl = document.getElementById('teacherSubjectsPreview');
@@ -129,9 +79,7 @@ async function updateTeacherSubjectsPreview() {
   
   try {
     const backendSemester = SEMESTER_MAP['1st'];
-    const res = await fetch(`${API_BASE}/subjects/${branch}/${backendSemester}`, { 
-      credentials: 'include' 
-    });
+    const res = await fetch(`${API_BASE}/subjects/${branch}/${backendSemester}`, { credentials: 'include' });
     const data = await res.json();
     
     if (data.subjects?.length > 0) {
@@ -147,12 +95,10 @@ async function updateTeacherSubjectsPreview() {
   } catch (err) {
     previewEl.className = 'subjects-preview empty';
     previewEl.innerHTML = '<strong>📚 Error:</strong> Cannot load subjects';
-    console.error('Teacher preview error:', err);
   }
 }
 
 // 🔥 STUDENT CASCADE - Branch → Semesters → Subjects
-// 🔥 FIXED: Handle SINGLE OBJECT from /subjects/CSE endpoint
 async function updateStudentSemesters(branch) {
   const semesterSelect = document.getElementById('studentSemester');
   if (!semesterSelect || !branch) return;
@@ -161,51 +107,32 @@ async function updateStudentSemesters(branch) {
   semesterSelect.innerHTML = '<option value="">⏳ Loading semesters...</option>';
   
   try {
-    console.log('🔍 Fetching semesters for branch:', branch);
-    
     const res = await fetch(`${API_BASE}/subjects/${branch}`, { credentials: 'include' });
     const data = await res.json();
-    console.log('📚 Raw API data:', data);
     
-    // 🔥 FIX: Handle BOTH array AND single object
     let semesters = [];
     if (Array.isArray(data)) {
-      // Multiple semester objects: [{semester: "1st Semester"}, {semester: "2nd Semester"}]
       semesters = data.map(item => item.semester);
     } else if (data && data.semester) {
-      // Single object: {semester: "All"} OR {semester: "1st Semester"}
       semesters = [data.semester];
     }
     
-    console.log('✅ Unique semesters found:', semesters);
-    
-    // Populate dropdown
     semesterSelect.innerHTML = '<option value="">Select Semester</option>';
     
     semesters.forEach(semester => {
       const frontendValue = semester.replace(' Semester', '').replace('All', '1st');
       const option = document.createElement('option');
-      option.value = frontendValue;        // "1st Semester" → value="1st"
-      option.textContent = semester;       // display: "1st Semester" OR "All"
+      option.value = frontendValue;
+      option.textContent = semester;
       semesterSelect.appendChild(option);
     });
     
     semesterSelect.disabled = false;
-    
-    if (semesters.length === 0) {
-      semesterSelect.innerHTML = '<option value="">No semesters found</option>';
-    }
-    
-    console.log('✅ Semesters populated:', semesterSelect.options.length - 1);
-    
   } catch (err) {
-    console.error('❌ Semester load ERROR:', err);
     semesterSelect.innerHTML = '<option value="">Error loading semesters</option>';
     semesterSelect.disabled = false;
   }
 }
-
-
 
 async function updateStudentSubjectsPreview() {
   const branch = document.getElementById('studentBranch')?.value;
@@ -219,9 +146,7 @@ async function updateStudentSubjectsPreview() {
   
   try {
     const backendSemester = SEMESTER_MAP[semester];
-    const res = await fetch(`${API_BASE}/subjects/${branch}/${backendSemester}`, { 
-      credentials: 'include' 
-    });
+    const res = await fetch(`${API_BASE}/subjects/${branch}/${backendSemester}`, { credentials: 'include' });
     const data = await res.json();
     
     if (data.subjects?.length > 0) {
@@ -258,7 +183,7 @@ async function updateSubjectPreview() {
   }
 }
 
-// ADMIN EDIT FUNCTIONS
+// 🔥 ADMIN EDIT FUNCTIONS
 async function editTeacher(id, teacherData) {
   editingId = id;
   editingType = 'teacher';
@@ -332,7 +257,6 @@ async function loadSubjectsTable() {
   try {
     const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
     const subjects = await res.json();
-    
     const tbody = document.getElementById('subjectsTableBody');
     if (!tbody) return;
     
@@ -407,25 +331,20 @@ async function loadStudentsTable() {
     console.error('Students table error:', err);
   }
 }
-// 🔥 FIXED DELETE - Handles 404 gracefully
-// 🔥 FIXED DELETE FUNCTIONS - Remove DUPLICATES
+
+// 🔥 FIXED DELETE FUNCTIONS - 404-PROOF
 async function deleteStudent(id) {
   if (!confirm('Delete this student?')) return;
   
   try {
-    const res = await fetch(`${API_BASE}/students/${id}`, { 
-      method: 'DELETE', 
-      credentials: 'include' 
-    });
+    const res = await fetch(`${API_BASE}/students/${id}`, { method: 'DELETE', credentials: 'include' });
     
     if (res.ok) {
       loadStudentsTable();
       showMessage('✅ Student deleted!', 'success');
-      cancelEdit(); // 🔥 RESET edit state
     } else if (res.status === 404) {
       showMessage('⚠️ Student already deleted', 'info');
       loadStudentsTable();
-      cancelEdit(); // 🔥 RESET edit state
     } else {
       showMessage(`❌ Delete failed: ${res.status}`, 'error');
     }
@@ -438,19 +357,14 @@ async function deleteTeacher(id) {
   if (!confirm('Delete this teacher?')) return;
   
   try {
-    const res = await fetch(`${API_BASE}/teachers/${id}`, { 
-      method: 'DELETE', 
-      credentials: 'include' 
-    });
+    const res = await fetch(`${API_BASE}/teachers/${id}`, { method: 'DELETE', credentials: 'include' });
     
     if (res.ok) {
       loadTeachersTable();
       showMessage('✅ Teacher deleted!', 'success');
-      cancelEdit(); // 🔥 RESET edit state
     } else if (res.status === 404) {
       showMessage('⚠️ Teacher already deleted', 'info');
       loadTeachersTable();
-      cancelEdit(); // 🔥 RESET edit state
     } else {
       showMessage(`❌ Delete failed: ${res.status}`, 'error');
     }
@@ -463,19 +377,14 @@ async function deleteSubject(id) {
   if (!confirm('Delete this subject entry?')) return;
   
   try {
-    const res = await fetch(`${API_BASE}/subjects/${id}`, { 
-      method: 'DELETE', 
-      credentials: 'include' 
-    });
+    const res = await fetch(`${API_BASE}/subjects/${id}`, { method: 'DELETE', credentials: 'include' });
     
     if (res.ok) {
       loadSubjectsTable();
       showMessage('✅ Subject deleted!', 'success');
-      cancelEdit(); // 🔥 RESET edit state
     } else if (res.status === 404) {
       showMessage('⚠️ Subject already deleted', 'info');
       loadSubjectsTable();
-      cancelEdit(); // 🔥 RESET edit state
     } else {
       showMessage(`❌ Delete failed: ${res.status}`, 'error');
     }
@@ -484,7 +393,7 @@ async function deleteSubject(id) {
   }
 }
 
-// 🔥 FIXED FORM SUBMISSIONS - Check 404 before UPDATE
+// 🔥 FIXED FORM SUBMISSIONS - 404-PROOF UPDATE
 async function createTeacher(e) {
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
@@ -502,12 +411,10 @@ async function createTeacher(e) {
     let url = `${API_BASE}/teachers`;
     let method = 'POST';
     
-    // 🔥 CHECK IF EDITING DELETED ITEM
     if (editingType === 'teacher' && editingId) {
-      // First verify item exists
       const checkRes = await fetch(`${API_BASE}/teachers/${editingId}`, { credentials: 'include' });
       if (!checkRes.ok) {
-        showMessage('⚠️ Item was deleted. Start fresh.', 'info');
+        showMessage('⚠️ Teacher was deleted. Create new one.', 'info');
         cancelEdit();
         btn.disabled = false;
         return;
@@ -526,8 +433,7 @@ async function createTeacher(e) {
 
     const data = await res.json();
     if (data.success || res.ok) {
-      const msg = editingId ? '✅ Teacher updated!' : '✅ Teacher created! Default password: teacher123';
-      showMessage(msg, 'success');
+      showMessage(editingId ? '✅ Teacher updated!' : '✅ Teacher created! Password: teacher123', 'success');
       e.target.reset();
       editingId = null;
       editingType = null;
@@ -561,11 +467,10 @@ async function createStudent(e) {
     let url = `${API_BASE}/students`;
     let method = 'POST';
     
-    // 🔥 CHECK IF EDITING DELETED ITEM
     if (editingType === 'student' && editingId) {
       const checkRes = await fetch(`${API_BASE}/students/${editingId}`, { credentials: 'include' });
       if (!checkRes.ok) {
-        showMessage('⚠️ Item was deleted. Start fresh.', 'info');
+        showMessage('⚠️ Student was deleted. Create new one.', 'info');
         cancelEdit();
         btn.disabled = false;
         return;
@@ -584,8 +489,7 @@ async function createStudent(e) {
 
     const data = await res.json();
     if (data.success || res.ok) {
-      const msg = editingId ? '✅ Student updated!' : '✅ Student created! Default password: student123';
-      showMessage(msg, 'success');
+      showMessage(editingId ? '✅ Student updated!' : '✅ Student created! Password: student123', 'success');
       e.target.reset();
       editingId = null;
       editingType = null;
@@ -601,8 +505,6 @@ async function createStudent(e) {
   }
 }
 
-
-// 🔥 FORM SUBMISSIONS
 async function createSubject(e) {
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
@@ -617,6 +519,13 @@ async function createSubject(e) {
     let method = 'POST';
     
     if (editingType === 'subject' && editingId) {
+      const checkRes = await fetch(`${API_BASE}/subjects/${editingId}`, { credentials: 'include' });
+      if (!checkRes.ok) {
+        showMessage('⚠️ Subjects were deleted. Create new ones.', 'info');
+        cancelEdit();
+        btn.disabled = false;
+        return;
+      }
       url = `${API_BASE}/subjects/${editingId}`;
       method = 'PUT';
     }
@@ -634,7 +543,7 @@ async function createSubject(e) {
 
     const data = await res.json();
     if (data.success || res.ok) {
-      showMessage(editingId ? 'Subjects updated!' : 'Subjects created!', 'success');
+      showMessage(editingId ? '✅ Subjects updated!' : '✅ Subjects created!', 'success');
       e.target.reset();
       const previewEl = document.getElementById('subjectPreview');
       if (previewEl) previewEl.style.display = 'none';
@@ -642,117 +551,17 @@ async function createSubject(e) {
       editingType = null;
       btn.textContent = 'Add Subjects';
       loadSubjectsTable();
-      loadBranches();
     } else {
-      showMessage(data.message || 'Failed to save subjects');
+      showMessage(data.message || 'Failed to save subjects', 'error');
     }
   } catch (err) {
-    showMessage('Network error: ' + err.message);
+    showMessage('❌ Network error: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
 }
 
-async function createTeacher(e) {
-  e.preventDefault();
-  const btn = e.target.querySelector('button[type="submit"]');
-  btn.disabled = true;
-  
-  try {
-    const formData = {
-      name: document.getElementById('teacherName').value,
-      email: document.getElementById('teacherEmail').value,
-      setDefaultPassword: true,
-      branch: document.getElementById('teacherBranch').value,
-      salary: parseInt(document.getElementById('teacherSalary').value)
-    };
-    
-    let url = `${API_BASE}/teachers`;
-    let method = 'POST';
-    
-    if (editingType === 'teacher' && editingId) {
-      url = `${API_BASE}/teachers/${editingId}`;
-      method = 'PUT';
-      formData.password = document.getElementById('teacherPassword').value || undefined;
-    }
-
-    const res = await fetch(url, {
-      method: method,
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(formData)
-    });
-
-    const data = await res.json();
-    if (data.success || res.ok) {
-      const msg = editingId ? 'Teacher updated!' : 'Teacher created! Default password: teacher123';
-      showMessage(msg, 'success');
-      e.target.reset();
-      editingId = null;
-      editingType = null;
-      btn.textContent = 'Create Teacher';
-      loadTeachersTable();
-    } else {
-      showMessage(data.message || 'Failed to save teacher');
-    }
-  } catch (err) {
-    showMessage('Network error: ' + err.message);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function createStudent(e) {
-  e.preventDefault();
-  const btn = e.target.querySelector('button[type="submit"]');
-  btn.disabled = true;
-  
-  try {
-    const formData = {
-      name: document.getElementById('studentName').value,
-      email: document.getElementById('studentEmail').value,
-      setDefaultPassword: true,
-      rollNo: document.getElementById('studentRollNo').value,
-      branch: document.getElementById('studentBranch').value,
-      semester: document.getElementById('studentSemester').value
-    };
-    
-    let url = `${API_BASE}/students`;
-    let method = 'POST';
-    
-    if (editingType === 'student' && editingId) {
-      url = `${API_BASE}/students/${editingId}`;
-      method = 'PUT';
-      formData.password = document.getElementById('studentPassword').value || undefined;
-    }
-
-    const res = await fetch(url, {
-      method: method,
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(formData)
-    });
-
-    const data = await res.json();
-    if (data.success || res.ok) {
-      const msg = editingId ? 'Student updated!' : 'Student created! Default password: student123';
-      showMessage(msg, 'success');
-      e.target.reset();
-      editingId = null;
-      editingType = null;
-      btn.textContent = 'Create Student';
-      loadStudentsTable();
-    } else {
-      showMessage(data.message || 'Failed to save student');
-    }
-  } catch (err) {
-    showMessage('Network error: ' + err.message);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-// 🔥 TEACHER FUNCTIONS (unchanged)
+// 🔥 TEACHER FUNCTIONS
 async function loadTeacherProfile() {
   try {
     const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
@@ -763,14 +572,9 @@ async function loadTeacherProfile() {
     document.getElementById('profileEmail') && (document.getElementById('profileEmail').textContent = teacher.email || 'N/A');
     document.getElementById('profileBranch') && (document.getElementById('profileBranch').textContent = teacher.branch || 'N/A');
     document.getElementById('profileSalary') && (document.getElementById('profileSalary').textContent = teacher.salary ? `₹${teacher.salary}` : '₹0');
-    document.getElementById('currentUserId') && (document.getElementById('currentUserId').textContent = teacher.name || 'Teacher');
   } catch (err) {
     console.error('Teacher profile load error:', err);
   }
-}
-
-async function loadTeacherBranches() {
-  await loadBranches(); // Reuse global function
 }
 
 async function loadTeacherClasses() {
