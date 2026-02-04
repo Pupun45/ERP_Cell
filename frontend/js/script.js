@@ -1,4 +1,4 @@
-const API_BASE = 'https://your-render-backend.onrender.com/api'; // Replace with your Render URL
+const API_BASE = 'https://erp-cell.onrender.com/api'; // Replace with your Render URL
 
 // Show message
 function showMessage(text, type = 'error') {
