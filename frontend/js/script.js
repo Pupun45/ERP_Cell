@@ -183,37 +183,6 @@ async function updateSubjectPreview() {
   }
 }
 
-// 🔥 ADMIN EDIT FUNCTIONS
-async function editTeacher(id, teacherData) {
-  editingId = id;
-  editingType = 'teacher';
-  document.getElementById('teacherName').value = teacherData.name || '';
-  document.getElementById('teacherEmail').value = teacherData.email || '';
-  document.getElementById('teacherPassword').value = '';
-  document.getElementById('teacherBranch').value = teacherData.branch || '';
-  document.getElementById('teacherSalary').value = teacherData.salary || '';
-  
-  const btn = document.querySelector('#createTeacherForm button[type="submit"]');
-  if (btn) btn.textContent = 'Update Teacher';
-  document.querySelector('.card:has(#createTeacherForm)')?.scrollIntoView({ behavior: 'smooth' });
-  showMessage('Edit teacher details and click Update!', 'info');
-}
-
-async function editStudent(id, studentData) {
-  editingId = id;
-  editingType = 'student';
-  document.getElementById('studentName').value = studentData.name || '';
-  document.getElementById('studentEmail').value = studentData.email || '';
-  document.getElementById('studentPassword').value = '';
-  document.getElementById('studentRollNo').value = studentData.rollNo || '';
-  document.getElementById('studentBranch').value = studentData.branch || '';
-  document.getElementById('studentSemester').value = studentData.semester || '';
-  
-  const btn = document.querySelector('#createStudentForm button[type="submit"]');
-  if (btn) btn.textContent = 'Update Student';
-  document.querySelector('.card:has(#createStudentForm)')?.scrollIntoView({ behavior: 'smooth' });
-  showMessage('Edit student details and click Update!', 'info');
-}
 
 async function editSubject(id, subjectData) {
   editingId = id;
@@ -512,7 +481,8 @@ async function createSubject(e) {
     btn.disabled = false;
   }
 }
-// 🔥 PERFECT TABLE LOADERS - Buttons WORK 100%
+
+// 🔥 1. FIXED loadTeachersTable() - Pass FULL data
 async function loadTeachersTable() {
   try {
     const res = await fetch(`${API_BASE}/teachers`, { credentials: 'include' });
@@ -527,8 +497,10 @@ async function loadTeachersTable() {
         <td>${t.subjects?.slice(0,2).join(', ') || 'N/A'}</td>
         <td>₹${t.salary || 0}</td>
         <td>
-          <button onclick="editTeacher('${t._id}')" class="btn btn-warning btn-sm">Edit</button>
-          <button onclick="deleteTeacher('${t._id}')" class="btn btn-danger btn-sm">Delete</button>
+          <button onclick="editTeacher('${t._id}', '${t.name}', '${t.email}', '${t.branch}', '${t.salary}')" 
+                  class="btn btn-warning btn-sm me-1">Edit</button>
+          <button onclick="deleteTeacher('${t._id}')" 
+                  class="btn btn-danger btn-sm">Delete</button>
         </td>
       </tr>
     `).join('') || '<tr><td colspan="6" class="text-center py-4">No teachers</td></tr>';
@@ -537,6 +509,7 @@ async function loadTeachersTable() {
   }
 }
 
+// 🔥 2. FIXED loadStudentsTable()
 async function loadStudentsTable() {
   try {
     const res = await fetch(`${API_BASE}/students`, { credentials: 'include' });
@@ -551,8 +524,10 @@ async function loadStudentsTable() {
         <td>${s.semester}</td>
         <td>${s.subjects?.slice(0,2).join(', ') || 'N/A'}</td>
         <td>
-          <button onclick="editStudent('${s._id}')" class="btn btn-warning btn-sm">Edit</button>
-          <button onclick="deleteStudent('${s._id}')" class="btn btn-danger btn-sm">Delete</button>
+          <button onclick="editStudent('${s._id}', '${s.name}', '${s.email}', '${s.rollNo}', '${s.branch}', '${s.semester}')" 
+                  class="btn btn-warning btn-sm me-1">Edit</button>
+          <button onclick="deleteStudent('${s._id}')" 
+                  class="btn btn-danger btn-sm">Delete</button>
         </td>
       </tr>
     `).join('') || '<tr><td colspan="6" class="text-center py-4">No students</td></tr>';
@@ -560,6 +535,45 @@ async function loadStudentsTable() {
     console.error('Students error:', err);
   }
 }
+
+// 🔥 3. FIXED editTeacher() - Single param version
+async function editTeacher(id, name, email, branch, salary) {
+  editingId = id;
+  editingType = 'teacher';
+  
+  document.getElementById('teacherName').value = name || '';
+  document.getElementById('teacherEmail').value = email || '';
+  document.getElementById('teacherPassword').value = '';
+  document.getElementById('teacherBranch').value = branch || '';
+  document.getElementById('teacherSalary').value = salary || '';
+  
+  const btn = document.querySelector('#createTeacherForm button[type="submit"]');
+  if (btn) btn.textContent = 'Update Teacher';
+  
+  document.querySelector('.card:has(#createTeacherForm)')?.scrollIntoView({ behavior: 'smooth' });
+  showMessage('✏️ Edit teacher details and click Update!', 'info');
+}
+
+// 🔥 4. FIXED editStudent()
+async function editStudent(id, name, email, rollNo, branch, semester) {
+  editingId = id;
+  editingType = 'student';
+  
+  document.getElementById('studentName').value = name || '';
+  document.getElementById('studentEmail').value = email || '';
+  document.getElementById('studentPassword').value = '';
+  document.getElementById('studentRollNo').value = rollNo || '';
+  document.getElementById('studentBranch').value = branch || '';
+  document.getElementById('studentSemester').value = semester || '';
+  
+  const btn = document.querySelector('#createStudentForm button[type="submit"]');
+  if (btn) btn.textContent = 'Update Student';
+  
+  document.querySelector('.card:has(#createStudentForm)')?.scrollIntoView({ behavior: 'smooth' });
+  showMessage('✏️ Edit student details and click Update!', 'info');
+}
+
+
 
 // 🔥 SIMPLIFIED EDIT FUNCTIONS
 function editTeacher(id) {

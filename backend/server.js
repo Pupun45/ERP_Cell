@@ -394,6 +394,79 @@ app.get('/api/students', auth, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// 🔥 DELETE TEACHERS (add after students GET)
+app.delete('/api/teachers/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const teacher = await Teacher.findByIdAndDelete(req.params.id);
+    if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+    console.log('✅ Teacher deleted:', teacher.name);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 🔥 DELETE STUDENTS (add after teachers DELETE)
+app.delete('/api/students/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const student = await Student.findByIdAndDelete(req.params.id);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+    console.log('✅ Student deleted:', student.name);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 🔥 UPDATE TEACHERS (add after teachers POST)
+app.put('/api/teachers/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const { name, email, password, branch, salary } = req.body;
+    const updateData = { name, email: email.toLowerCase(), branch, salary };
+    
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12);
+    }
+    
+    const teacher = await Teacher.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+    res.json(teacher);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 🔥 UPDATE STUDENTS (add after students POST)
+app.put('/api/students/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const { name, email, password, rollNo, branch, semester } = req.body;
+    const updateData = { name, email: email.toLowerCase(), rollNo, branch, semester };
+    
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12);
+    }
+    
+    const student = await Student.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // Logout
 app.post('/api/logout', (req, res) => {
