@@ -10,13 +10,13 @@ const helmet = require('helmet');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 🔧 FIXED MIDDLEWARE - CRITICAL ORDER
+// 🔧 FIXED MIDDLEWARE ORDER
 app.use(helmet());
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(express.static('public'));
 
-// 🔥 FIXED CORS - Multiple origins + PROPER SameSite
+// 🔥 FIXED CORS - Multiple origins
 app.use(cors({
   origin: [
     'https://erp-cell.vercel.app',
@@ -24,26 +24,10 @@ app.use(cors({
     'http://127.0.0.1:3000'
   ],
   credentials: true,
-  optionsSuccessStatus: 200,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  optionsSuccessStatus: 200
 }));
 
-// 🗄️ FIXED MongoDB - Wait for connection
-let mongoReady = false;
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => {
-  console.log('✅ MongoDB connected successfully');
-  mongoReady = true;
-})
-.catch(err => {
-  console.error('❌ MongoDB connection FAILED:', err.message);
-  process.exit(1); // CRASH if no DB
-});
-
-// ===== SCHEMAS (unchanged - perfect) =====
+// ===== SCHEMAS =====
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
@@ -82,13 +66,29 @@ const studentSchema = new mongoose.Schema({
 });
 const Student = mongoose.model('Student', studentSchema);
 
-// 🛡️ FIXED Auth middleware - ASYNC + SAFE
+// 🛡️ FIXED createAdmin FUNCTION - MOVED UP
+async function createAdmin() {
+  try {
+    const adminExists = await User.findOne({ role: 'admin' });
+    if (!adminExists) {
+      const hashed = await bcrypt.hash('admin123', 12);
+      await User.create({ 
+        email: 'admin@collegeerp.com', 
+        password: hashed, 
+        role: 'admin' 
+      });
+      console.log('✅ Default admin created: admin@collegeerp.com / admin123');
+    } else {
+      console.log('✅ Admin already exists');
+    }
+  } catch (err) {
+    console.error('❌ Admin creation error:', err.message);
+  }
+}
+
+// 🔐 FIXED Auth middleware - ASYNC
 const auth = async (req, res, next) => {
   try {
-    if (!mongoReady) {
-      return res.status(503).json({ message: 'Database not ready' });
-    }
-    
     const token = req.cookies.token;
     if (!token) {
       return res.status(401).json({ message: 'No token provided' });
@@ -103,7 +103,29 @@ const auth = async (req, res, next) => {
   }
 };
 
-// 🔥 FIXED LOGIN - Most important route
+// 🔥 FIXED MongoDB - NO DEPRECATED OPTIONS
+let mongoReady = false;
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('✅ MongoDB connected successfully');
+    mongoReady = true;
+  })
+  .catch(err => {
+    console.error('❌ MongoDB connection FAILED:', err.message);
+    process.exit(1);
+  });
+
+// ===== ROUTES =====
+// Health check FIRST
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    mongo: mongoReady,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// LOGIN - Most critical
 app.post('/api/login', async (req, res) => {
   try {
     console.log('🔐 LOGIN attempt:', req.body.email);
@@ -115,83 +137,59 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     
     if (!email || !password) {
-      console.log('❌ Missing email/password');
       return res.status(400).json({ message: 'Email and password required' });
     }
 
-    // Find user - CASE INSENSITIVE
     const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      console.log('❌ User not found:', email);
+    if (!user || !await bcrypt.compare(password, user.password)) {
+      console.log('❌ Invalid credentials for:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      console.log('❌ Wrong password for:', email);
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // JWT Token
     const token = jwt.sign(
       { id: user._id, role: user.role }, 
       process.env.JWT_SECRET, 
       { expiresIn: '7d' }
     );
 
-    // 🔥 FIXED COOKIES for Vercel+Render cross-domain
+    // 🔥 FIXED COOKIES - Cross-domain Vercel→Render
     res.cookie('token', token, {
       httpOnly: true,
-      secure: true, // FORCE secure for production
-      sameSite: 'none', // CRITICAL for cross-site (Vercel→Render)
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    console.log('✅ LOGIN SUCCESS:', user.role, user.email);
-    
+    console.log('✅ LOGIN SUCCESS:', user.role);
     res.json({ 
       success: true, 
       role: user.role, 
-      redirect: `${user.role}.html`,
-      user: { email: user.email, role: user.role }
+      redirect: `${user.role}.html`
     });
     
   } catch (err) {
     console.error('💥 LOGIN ERROR:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 app.post('/api/logout', (req, res) => {
   res.clearCookie('token');
   res.clearCookie('token', { path: '/' });
-  res.json({ success: true, message: 'Logged out' });
+  res.json({ success: true });
 });
 
 app.get('/api/profile', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Profile error' });
   }
 });
 
-// Health check - FIRST route
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    mongo: mongoReady,
-    env: {
-      jwt: !!process.env.JWT_SECRET,
-      mongo: !!process.env.MONGO_URI,
-      frontend: !!process.env.FRONTEND_URL
-    }
-  });
-});
-
-// ===== ADMIN ROUTES (your existing logic - FIXED) =====
+// ===== ADMIN ROUTES =====
 app.get('/api/branches', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
@@ -282,36 +280,40 @@ app.get('/api/students', auth, async (req, res) => {
   }
 });
 
-// 🛡️ 404 handler
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// 🚀 FIXED Server Start - Wait for MongoDB + Create Admin
+// 🚀 FIXED Server Start - NO ERRORS
 const startServer = async () => {
   try {
-    // Wait for MongoDB
-    while (!mongoReady) {
-      console.log('⏳ Waiting for MongoDB...');
+    // Wait max 30 seconds for MongoDB
+    let attempts = 0;
+    while (!mongoReady && attempts < 30) {
+      console.log(`⏳ Waiting for MongoDB... (${attempts + 1}/30)`);
       await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
     }
     
-    // Create admin
+    if (!mongoReady) {
+      throw new Error('MongoDB connection timeout');
+    }
+    
+    // ✅ CREATE ADMIN - NOW DEFINED
     await createAdmin();
     
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`\n🚀 Server running on port ${PORT}`);
       console.log(`✅ Health: https://erp-cell.onrender.com/api/health`);
       console.log(`✅ Login: admin@collegeerp.com / admin123`);
-      console.log(`✅ CORS origins:`, [
-        'https://college-erp-rwhn.vercel.app',
-        'http://localhost:3000'
-      ]);
+      console.log(`✅ All APIs ready! 🎉`);
     });
   } catch (err) {
-    console.error('💥 Server start failed:', err);
+    console.error('💥 Server start failed:', err.message);
     process.exit(1);
   }
 };
 
+// Start when file loaded
 startServer();
