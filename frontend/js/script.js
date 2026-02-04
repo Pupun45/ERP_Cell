@@ -2,7 +2,6 @@ const API_BASE = 'https://erp-cell.onrender.com/api';
 
 // Show message - UNIVERSAL
 function showMessage(text, type = 'error') {
-  // Handle both dashboard-container and container layouts
   let msgEl = document.getElementById('message');
   if (!msgEl) {
     msgEl = document.querySelector('.message');
@@ -27,12 +26,12 @@ let editingType = null;
 // PERFECT auth check - NO auto-logout EVER
 async function checkAuth() {
   if (window.recentlyLoggedIn) {
-    console.log('⏳ Auth check SKIPPED - recent login');
+    console.log('Auth check SKIPPED - recent login');
     return true;
   }
   if (window.authCheckDisabled) return true;
   
-  console.log('🔍 Running auth check...');
+  console.log('Running auth check...');
   try {
     const res = await fetch(`${API_BASE}/profile`, { 
       method: 'GET',
@@ -45,19 +44,19 @@ async function checkAuth() {
     console.log('Profile response:', res.status);
     if (res.ok) {
       const user = await res.json();
-      console.log('✅ Auth OK:', user.email, 'Role:', user.role);
+      console.log('Auth OK:', user.email, 'Role:', user.role);
       return true;
     } else {
-      console.log('❌ Auth failed:', res.status);
+      console.log('Auth failed:', res.status);
       return false;
     }
   } catch (err) {
-    console.log('⚠️ Network error - staying logged in:', err.message);
+    console.log('Network error - staying logged in:', err.message);
     return true;
   }
 }
 
-// ===== DASHBOARD DETECTION =====
+// DASHBOARD DETECTION
 function detectDashboardType() {
   const path = window.location.pathname;
   if (path.includes('admin')) return 'admin';
@@ -66,7 +65,7 @@ function detectDashboardType() {
   return 'unknown';
 }
 
-// ===== ADMIN EDIT FUNCTIONS =====
+// ADMIN EDIT FUNCTIONS
 async function editTeacher(id, teacherData) {
   editingId = id;
   editingType = 'teacher';
@@ -77,7 +76,7 @@ async function editTeacher(id, teacherData) {
   document.getElementById('teacherSalary').value = teacherData.salary || '';
   
   const btn = document.querySelector('#createTeacherForm button[type="submit"]');
-  if (btn) btn.textContent = '✏️ Update Teacher';
+  if (btn) btn.textContent = 'Update Teacher';
   document.querySelector('.card:has(#createTeacherForm)')?.scrollIntoView({ behavior: 'smooth' });
   showMessage('Edit teacher details and click Update!', 'info');
 }
@@ -93,7 +92,7 @@ async function editStudent(id, studentData) {
   document.getElementById('studentSemester').value = studentData.semester || '';
   
   const btn = document.querySelector('#createStudentForm button[type="submit"]');
-  if (btn) btn.textContent = '✏️ Update Student';
+  if (btn) btn.textContent = 'Update Student';
   document.querySelector('.card:has(#createStudentForm)')?.scrollIntoView({ behavior: 'smooth' });
   showMessage('Edit student details and click Update!', 'info');
 }
@@ -108,7 +107,7 @@ async function editSubject(id, subjectData) {
     : subjectData.subjects;
   
   const btn = document.querySelector('#createSubjectForm button[type="submit"]');
-  if (btn) btn.textContent = '✏️ Update Subjects';
+  if (btn) btn.textContent = 'Update Subjects';
   document.querySelector('.card:has(#createSubjectForm)')?.scrollIntoView({ behavior: 'smooth' });
   showMessage('Edit subjects and click Update!', 'info');
 }
@@ -117,29 +116,27 @@ function cancelEdit() {
   editingId = null;
   editingType = null;
   
-  // Reset admin forms
   const forms = ['createTeacherForm', 'createStudentForm', 'createSubjectForm'];
   forms.forEach(formId => {
     const form = document.getElementById(formId);
     if (form) form.reset();
   });
   
-  // Reset admin buttons
   const adminBtns = document.querySelectorAll('#createTeacherForm button[type="submit"], #createStudentForm button[type="submit"], #createSubjectForm button[type="submit"]');
   adminBtns.forEach(btn => {
     if (btn.textContent.includes('Update')) {
-      if (btn.closest('#createTeacherForm')) btn.textContent = '➕ Create Teacher';
-      if (btn.closest('#createStudentForm')) btn.textContent = '➕ Create Student';
-      if (btn.closest('#createSubjectForm')) btn.textContent = '➕ Add Subjects';
+      if (btn.closest('#createTeacherForm')) btn.textContent = 'Create Teacher';
+      if (btn.closest('#createStudentForm')) btn.textContent = 'Create Student';
+      if (btn.closest('#createSubjectForm')) btn.textContent = 'Add Subjects';
     }
   });
   
   showMessage('Edit cancelled', 'info');
 }
 
-// ===== LOGIN =====
+// LOGIN
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('🌐 Page loaded:', window.location.pathname);
+  console.log('Page loaded:', window.location.pathname);
   
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
@@ -152,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-        console.log('🔐 Logging in:', email);
+        console.log('Logging in:', email);
         
         const res = await fetch(`${API_BASE}/login`, {
           method: 'POST',
@@ -168,7 +165,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           window.recentlyLoggedIn = true;
           setTimeout(() => window.recentlyLoggedIn = false, 10000);
           
-          // Redirect based on role
           if (data.user.role === 'teacher') {
             showMessage('Welcome Teacher! Redirecting...', 'success');
             setTimeout(() => window.location.href = '/teacher.html', 1500);
@@ -193,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // DASHBOARD PAGES - Role-based auth
+  // DASHBOARD PAGES
   console.log('Checking dashboard auth...');
   setTimeout(async () => {
     if (!window.recentlyLoggedIn) {
@@ -202,9 +198,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }, 2000);
 
-  // Initialize based on dashboard type
   const dashboardType = detectDashboardType();
-  console.log('🎯 Detected dashboard:', dashboardType);
+  console.log('Detected dashboard:', dashboardType);
   
   setTimeout(() => {
     if (dashboardType === 'admin') initAdminDashboard();
@@ -213,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, 2500);
 });
 
-// PERFECT LOGOUT - Universal
+// LOGOUT - Universal
 document.addEventListener('click', (e) => {
   if (e.target.id === 'logoutBtn' || e.target.matches('.btn-logout, .logout-btn')) {
     e.preventDefault();
@@ -222,7 +217,7 @@ document.addEventListener('click', (e) => {
 });
 
 async function logout() {
-  console.log('🔐 Manual logout');
+  console.log('Manual logout');
   try {
     await fetch(`${API_BASE}/logout`, { method: 'POST', credentials: 'include' });
   } catch (e) {}
@@ -236,24 +231,21 @@ async function logout() {
   setTimeout(() => window.location.href = '/login.html', 1000);
 }
 
-// ===== ADMIN DASHBOARD =====
+// ADMIN DASHBOARD
 async function initAdminDashboard() {
-  console.log('🚀 Initializing admin dashboard');
+  console.log('Initializing admin dashboard');
   try {
     await loadProfile();
     await loadBranches();
     
-    // Form event listeners
     document.getElementById('createSubjectForm')?.addEventListener('submit', createSubject);
     document.getElementById('createTeacherForm')?.addEventListener('submit', createTeacher);
     document.getElementById('createStudentForm')?.addEventListener('submit', createStudent);
     
-    // Refresh buttons
     document.getElementById('refreshSubjectsBtn')?.addEventListener('click', loadSubjects);
     document.getElementById('refreshTeachersBtn')?.addEventListener('click', loadTeachers);
     document.getElementById('refreshStudentsBtn')?.addEventListener('click', loadStudents);
     
-    // Preview updates
     document.getElementById('teacherBranch')?.addEventListener('change', updateTeacherSubjectsPreview);
     document.getElementById('studentBranch')?.addEventListener('change', updateStudentSubjectsPreview);
     document.getElementById('studentSemester')?.addEventListener('change', updateStudentSubjectsPreview);
@@ -266,14 +258,13 @@ async function initAdminDashboard() {
   }
 }
 
-// ===== TEACHER DASHBOARD =====
+// TEACHER DASHBOARD
 async function initTeacherDashboard() {
-  console.log('👨‍🏫 Initializing teacher dashboard');
+  console.log('Initializing teacher dashboard');
   try {
     await loadTeacherProfile();
     await loadTeacherBranches();
     
-    // Event listeners
     document.getElementById('createClassBtn')?.addEventListener('click', createTeacherClass);
     document.getElementById('classBranch')?.addEventListener('change', updateClassSubjectsPreview);
     document.getElementById('refreshAllBtn')?.addEventListener('click', loadTeacherProfile);
@@ -369,8 +360,8 @@ async function loadTeacherClasses() {
           <td>${cls.branch}</td>
           <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
           <td>
-            <button class="action-btn btn-primary" onclick="loadAttendance('${cls._id}')">📋 Attendance</button>
-            <button class="action-btn btn-success" onclick="loadMarks('${cls._id}')">✏️ Marks</button>
+            <button class="action-btn btn-primary" onclick="loadAttendance('${cls._id}')">Attendance</button>
+            <button class="action-btn btn-success" onclick="loadMarks('${cls._id}')">Marks</button>
           </td>
         `;
       });
@@ -380,9 +371,9 @@ async function loadTeacherClasses() {
   }
 }
 
-// ===== STUDENT DASHBOARD =====
+// STUDENT DASHBOARD
 async function initStudentDashboard() {
-  console.log('👨‍🎓 Initializing student dashboard');
+  console.log('Initializing student dashboard');
   try {
     await loadStudentProfile();
     
@@ -420,7 +411,7 @@ async function loadStudentData() {
   loadStudentTeachers();
 }
 
-
+// ADMIN COMMON FUNCTIONS
 async function loadProfile() {
   try {
     const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
@@ -463,7 +454,6 @@ async function loadBranches() {
   }
 }
 
-// ===== UPDATED SUBJECTS WITH EDIT =====
 async function createSubject(e) {
   e.preventDefault();
   const btn = e.target.querySelector('button');
@@ -486,19 +476,20 @@ async function createSubject(e) {
       method: method,
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ branch, semester, subjects: subjectsInput })
+      body: JSON.stringify({ branch, semester, subjects: subjectsInput.split(',').map(s => s.trim()) })
     });
 
     const data = await res.json();
     if (data.success || res.ok) {
       showMessage(editingId ? 'Subjects updated!' : 'Subjects created!', 'success');
       e.target.reset();
-      document.getElementById('subjectPreview').textContent = '✅ Ready!';
+      const previewEl = document.getElementById('subjectPreview');
+      if (previewEl) previewEl.textContent = 'Ready!';
       editingId = null;
       editingType = null;
-      btn.textContent = '➕ Add Subjects';
+      btn.textContent = 'Add Subjects';
       loadSubjects();
-      loadBranches(); // Refresh branches dropdown
+      loadBranches();
     } else {
       showMessage(data.message || 'Failed to save subjects');
     }
@@ -522,11 +513,11 @@ async function loadSubjects() {
         row.innerHTML = `
           <td>${subject.branch}</td>
           <td>${subject.semester}</td>
-          <td>${subject.subjects.join(', ')}</td>
+          <td>${subject.subjects?.join(', ') || 'N/A'}</td>
           <td>${new Date(subject.createdAt).toLocaleDateString()}</td>
           <td>
-            <button class="btn btn-warning btn-sm me-1" onclick="editSubject('${subject._id}', ${JSON.stringify(subject).replace(/"/g, '&quot;')})">✏️ Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteUser('subject', '${subject._id}')">🗑️ Delete</button>
+            <button class="btn btn-warning btn-sm me-1" onclick="editSubject('${subject._id}', ${JSON.stringify(subject).replace(/"/g, '&quot;')})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser('subject', '${subject._id}')">Delete</button>
           </td>
         `;
       });
@@ -536,7 +527,6 @@ async function loadSubjects() {
   }
 }
 
-// ===== UPDATED TEACHERS WITH EDIT =====
 async function createTeacher(e) {
   e.preventDefault();
   const btn = e.target.querySelector('button');
@@ -546,7 +536,7 @@ async function createTeacher(e) {
     const formData = {
       name: document.getElementById('teacherName').value,
       email: document.getElementById('teacherEmail').value,
-      password: document.getElementById('teacherPassword').value || 'teacher123',
+      setDefaultPassword: true,  // Backend hashes 'teacher123'
       branch: document.getElementById('teacherBranch').value,
       salary: parseInt(document.getElementById('teacherSalary').value)
     };
@@ -557,6 +547,7 @@ async function createTeacher(e) {
     if (editingType === 'teacher' && editingId) {
       url = `${API_BASE}/teachers/${editingId}`;
       method = 'PUT';
+      formData.password = document.getElementById('teacherPassword').value || undefined;
     }
 
     const res = await fetch(url, {
@@ -568,12 +559,14 @@ async function createTeacher(e) {
 
     const data = await res.json();
     if (data.success || res.ok) {
-      showMessage(editingId ? 'Teacher updated!' : 'Teacher created!', 'success');
+      const msg = editingId ? 'Teacher updated!' : 'Teacher created! Default password: teacher123';
+      showMessage(msg, 'success');
       e.target.reset();
-      document.getElementById('teacherSubjectsPreview').textContent = '✅ Ready!';
+      const previewEl = document.getElementById('teacherSubjectsPreview');
+      if (previewEl) previewEl.textContent = 'Ready!';
       editingId = null;
       editingType = null;
-      btn.textContent = '➕ Create Teacher';
+      btn.textContent = 'Create Teacher';
       loadTeachers();
     } else {
       showMessage(data.message || 'Failed to save teacher');
@@ -600,10 +593,10 @@ async function loadTeachers() {
           <td>${teacher.email}</td>
           <td>${teacher.branch}</td>
           <td>${teacher.subjects?.join(', ') || 'N/A'}</td>
-          <td>₹${teacher.salary}</td>
+          <td>${teacher.salary || 0}</td>
           <td>
-            <button class="btn btn-warning btn-sm me-1" onclick="editTeacher('${teacher._id}', ${JSON.stringify(teacher).replace(/"/g, '&quot;')})">✏️ Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteUser('teacher', '${teacher._id}')">🗑️ Delete</button>
+            <button class="btn btn-warning btn-sm me-1" onclick="editTeacher('${teacher._id}', ${JSON.stringify(teacher).replace(/"/g, '&quot;')})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser('teacher', '${teacher._id}')">Delete</button>
           </td>
         `;
       });
@@ -613,7 +606,6 @@ async function loadTeachers() {
   }
 }
 
-// ===== UPDATED STUDENTS WITH EDIT =====
 async function createStudent(e) {
   e.preventDefault();
   const btn = e.target.querySelector('button');
@@ -623,7 +615,7 @@ async function createStudent(e) {
     const formData = {
       name: document.getElementById('studentName').value,
       email: document.getElementById('studentEmail').value,
-      password: document.getElementById('studentPassword').value || 'student123',
+      setDefaultPassword: true,  // Backend hashes 'student123'
       rollNo: document.getElementById('studentRollNo').value,
       branch: document.getElementById('studentBranch').value,
       semester: document.getElementById('studentSemester').value
@@ -635,6 +627,7 @@ async function createStudent(e) {
     if (editingType === 'student' && editingId) {
       url = `${API_BASE}/students/${editingId}`;
       method = 'PUT';
+      formData.password = document.getElementById('studentPassword').value || undefined;
     }
 
     const res = await fetch(url, {
@@ -646,12 +639,14 @@ async function createStudent(e) {
 
     const data = await res.json();
     if (data.success || res.ok) {
-      showMessage(editingId ? 'Student updated!' : 'Student created!', 'success');
+      const msg = editingId ? 'Student updated!' : 'Student created! Default password: student123';
+      showMessage(msg, 'success');
       e.target.reset();
-      document.getElementById('subjectsList').textContent = '-- Select Branch + Semester --';
+      const subjectsList = document.getElementById('subjectsList');
+      if (subjectsList) subjectsList.textContent = '-- Select Branch + Semester --';
       editingId = null;
       editingType = null;
-      btn.textContent = '➕ Create Student';
+      btn.textContent = 'Create Student';
       loadStudents();
     } else {
       showMessage(data.message || 'Failed to save student');
@@ -680,8 +675,8 @@ async function loadStudents() {
           <td>${student.semester}</td>
           <td>${student.subjects?.join(', ') || 'N/A'}</td>
           <td>
-            <button class="btn btn-warning btn-sm me-1" onclick="editStudent('${student._id}', ${JSON.stringify(student).replace(/"/g, '&quot;')})">✏️ Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteUser('student', '${student._id}')">🗑️ Delete</button>
+            <button class="btn btn-warning btn-sm me-1" onclick="editStudent('${student._id}', ${JSON.stringify(student).replace(/"/g, '&quot;')})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser('student', '${student._id}')">Delete</button>
           </td>
         `;
       });
@@ -709,6 +704,14 @@ function updateStudentSubjectsPreview() {
   }
 }
 
+function updateClassSubjectsPreview() {
+  const branch = document.getElementById('classBranch').value;
+  const previewEl = document.getElementById('classSubjectsPreview');
+  if (previewEl) {
+    previewEl.textContent = branch ? `Subjects for ${branch}: Auto-assigned` : 'Select branch to preview subjects';
+  }
+}
+
 async function deleteUser(type, id) {
   if (!confirm(`Delete this ${type}?`)) return;
   
@@ -725,4 +728,43 @@ async function deleteUser(type, id) {
   if (type === 'teacher') loadTeachers();
   if (type === 'student') loadStudents();
   if (type === 'subject') loadSubjects();
+}
+
+// Placeholder functions for teacher/student features
+function loadAttendance(classId) {
+  showMessage('Attendance feature coming soon!', 'info');
+  console.log('Load attendance for class:', classId);
+}
+
+function loadMarks(classId) {
+  showMessage('Marks feature coming soon!', 'info');
+  console.log('Load marks for class:', classId);
+}
+
+function loadStudentAttendance() {
+  const tbody = document.getElementById('attendanceBody');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">No attendance data available</td></tr>';
+  }
+}
+
+function loadStudentMarks() {
+  const tbody = document.getElementById('marksBody');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">No marks data available</td></tr>';
+  }
+}
+
+function loadStudentSubjects() {
+  const tbody = document.getElementById('subjectsBody');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">No subjects data available</td></tr>';
+  }
+}
+
+function loadStudentTeachers() {
+  const tbody = document.getElementById('teachersBody');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">No teachers data available</td></tr>';
+  }
 }
