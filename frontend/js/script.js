@@ -282,114 +282,6 @@ async function loadSubjectsTable() {
   }
 }
 
-async function loadTeachersTable() {
-  try {
-    const res = await fetch(`${API_BASE}/teachers`, { credentials: 'include' });
-    const teachers = await res.json();
-    const tbody = document.getElementById('teachersTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = teachers.map(t => `
-      <tr>
-        <td>${t.name}</td>
-        <td>${t.email}</td>
-        <td>${t.branch}</td>
-        <td>${t.subjects?.slice(0, 2).join(', ') || 'N/A'}</td>
-        <td>₹${t.salary || 0}</td>
-        <td>
-          <button class="btn-warning btn-secondary me-1 edit-teacher" 
-                  data-id="${t._id}"
-                  data-name="${t.name}"
-                  data-email="${t.email}"
-                  data-branch="${t.branch}"
-                  data-salary="${t.salary}">Edit</button>
-          <button class="btn-danger btn-secondary delete-teacher" 
-                  data-id="${t._id}">Delete</button>
-        </td>
-      </tr>
-    `).join('') || '<tr><td colspan="6" style="text-align: center;">No teachers</td></tr>';
-
-    // 🔥 ADD EVENT LISTENERS AFTER TABLE RENDER
-    document.querySelectorAll('.edit-teacher').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.dataset.id;
-        const teacherData = {
-          name: this.dataset.name,
-          email: this.dataset.email,
-          branch: this.dataset.branch,
-          salary: this.dataset.salary
-        };
-        editTeacher(id, teacherData);
-      });
-    });
-
-    document.querySelectorAll('.delete-teacher').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.dataset.id;
-        deleteTeacher(id);
-      });
-    });
-
-  } catch (err) {
-    console.error('Teachers table error:', err);
-  }
-}
-
-
-async function loadStudentsTable() {
-  try {
-    const res = await fetch(`${API_BASE}/students`, { credentials: 'include' });
-    const students = await res.json();
-    const tbody = document.getElementById('studentsTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = students.map(s => `
-      <tr>
-        <td>${s.name}</td>
-        <td>${s.rollNo}</td>
-        <td>${s.branch}</td>
-        <td>${s.semester}</td>
-        <td>${s.subjects?.slice(0, 2).join(', ') || 'N/A'}</td>
-        <td>
-          <button class="btn-warning btn-secondary me-1 edit-student" 
-                  data-id="${s._id}"
-                  data-name="${s.name}"
-                  data-email="${s.email}"
-                  data-rollno="${s.rollNo}"
-                  data-branch="${s.branch}"
-                  data-semester="${s.semester}">Edit</button>
-          <button class="btn-danger btn-secondary delete-student" 
-                  data-id="${s._id}">Delete</button>
-        </td>
-      </tr>
-    `).join('') || '<tr><td colspan="6" style="text-align: center;">No students</td></tr>';
-
-    // 🔥 ADD EVENT LISTENERS
-    document.querySelectorAll('.edit-student').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.dataset.id;
-        const studentData = {
-          name: this.dataset.name,
-          email: this.dataset.email,
-          rollNo: this.dataset.rollno,
-          branch: this.dataset.branch,
-          semester: this.dataset.semester
-        };
-        editStudent(id, studentData);
-      });
-    });
-
-    document.querySelectorAll('.delete-student').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.dataset.id;
-        deleteStudent(id);
-      });
-    });
-
-  } catch (err) {
-    console.error('Students table error:', err);
-  }
-}
 
 
 // 🔥 FIXED DELETE FUNCTIONS - 404-PROOF
@@ -619,6 +511,86 @@ async function createSubject(e) {
   } finally {
     btn.disabled = false;
   }
+}
+// 🔥 PERFECT TABLE LOADERS - Buttons WORK 100%
+async function loadTeachersTable() {
+  try {
+    const res = await fetch(`${API_BASE}/teachers`, { credentials: 'include' });
+    const teachers = await res.json();
+    const tbody = document.getElementById('teachersTableBody');
+    
+    tbody.innerHTML = teachers.map(t => `
+      <tr>
+        <td>${t.name}</td>
+        <td>${t.email}</td>
+        <td>${t.branch}</td>
+        <td>${t.subjects?.slice(0,2).join(', ') || 'N/A'}</td>
+        <td>₹${t.salary || 0}</td>
+        <td>
+          <button onclick="editTeacher('${t._id}')" class="btn btn-warning btn-sm">Edit</button>
+          <button onclick="deleteTeacher('${t._id}')" class="btn btn-danger btn-sm">Delete</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="text-center py-4">No teachers</td></tr>';
+  } catch (err) {
+    console.error('Teachers error:', err);
+  }
+}
+
+async function loadStudentsTable() {
+  try {
+    const res = await fetch(`${API_BASE}/students`, { credentials: 'include' });
+    const students = await res.json();
+    const tbody = document.getElementById('studentsTableBody');
+    
+    tbody.innerHTML = students.map(s => `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.rollNo}</td>
+        <td>${s.branch}</td>
+        <td>${s.semester}</td>
+        <td>${s.subjects?.slice(0,2).join(', ') || 'N/A'}</td>
+        <td>
+          <button onclick="editStudent('${s._id}')" class="btn btn-warning btn-sm">Edit</button>
+          <button onclick="deleteStudent('${s._id}')" class="btn btn-danger btn-sm">Delete</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="text-center py-4">No students</td></tr>';
+  } catch (err) {
+    console.error('Students error:', err);
+  }
+}
+
+// 🔥 SIMPLIFIED EDIT FUNCTIONS
+function editTeacher(id) {
+  editingId = id;
+  editingType = 'teacher';
+  fetch(`${API_BASE}/teachers/${id}`, { credentials: 'include' })
+    .then(res => res.json())
+    .then(teacher => {
+      document.getElementById('teacherName').value = teacher.name;
+      document.getElementById('teacherEmail').value = teacher.email;
+      document.getElementById('teacherBranch').value = teacher.branch;
+      document.getElementById('teacherSalary').value = teacher.salary;
+      document.querySelector('#createTeacherForm button[type="submit"]').textContent = 'Update Teacher';
+      showMessage('Edit Amit and click Update!', 'info');
+    });
+}
+
+function editStudent(id) {
+  editingId = id;
+  editingType = 'student';
+  fetch(`${API_BASE}/students/${id}`, { credentials: 'include' })
+    .then(res => res.json())
+    .then(student => {
+      document.getElementById('studentName').value = student.name;
+      document.getElementById('studentEmail').value = student.email;
+      document.getElementById('studentRollNo').value = student.rollNo;
+      document.getElementById('studentBranch').value = student.branch;
+      document.getElementById('studentSemester').value = student.semester;
+      document.querySelector('#createStudentForm button[type="submit"]').textContent = 'Update Student';
+      showMessage('Edit student and click Update!', 'info');
+    });
 }
 
 // 🔥 TEACHER FUNCTIONS
