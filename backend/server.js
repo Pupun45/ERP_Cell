@@ -119,9 +119,9 @@ mongoose.connect(process.env.MONGO_URI)
 // Health check FIRST
 app.get('/api/health', (req, res) => {
   res.json({ 
-    status: 'OK', 
-    mongo: mongoReady,
-    timestamp: new Date().toISOString()
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    mongoConnected: mongoose.connection.readyState === 1
   });
 });
 
