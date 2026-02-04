@@ -458,6 +458,34 @@ app.delete('/api/students/:id', auth, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// 🔥 CRITICAL: Subjects by branch/semester API - MUST BE BEFORE 404 handler
+app.get('/api/subjects/:branch/:semester?', auth, async (req, res) => {
+  try {
+    console.log('🔍 Subjects API called:', req.params); // DEBUG LOG
+    
+    const { branch, semester } = req.params;
+    let query = { branch };
+    
+    if (semester) query.semester = semester;
+    
+    console.log('🔍 Querying subjects:', query); // DEBUG LOG
+    
+    const subjectsData = await Subject.find(query);
+    const allSubjects = subjectsData.flatMap(s => s.subjects || []);
+    
+    console.log('✅ Found subjects:', allSubjects.length, 'for', branch); // DEBUG LOG
+    
+    res.json({
+      branch,
+      semester: semester || 'All',
+      subjects: [...new Set(allSubjects)], // Remove duplicates
+      count: allSubjects.length
+    });
+  } catch (err) {
+    console.error('❌ Subjects API ERROR:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
 
 app.delete('/api/subjects/:id', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
