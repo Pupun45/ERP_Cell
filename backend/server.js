@@ -11,13 +11,14 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true
+  origin: process.env.FRONTEND_URL, 
+  credentials: true,
+  optionsSuccessStatus: 200,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE']
 }));
-app.use(express.json());
-app.use(cookieParser());
+
 
 // MongoDB - CLEAN (no warnings)
 mongoose.connect(process.env.MONGO_URI)

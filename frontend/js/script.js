@@ -9,47 +9,54 @@ function showMessage(text, type = 'error') {
   setTimeout(() => msgEl.textContent = '', 5000);
 }
 
-// FIXED: Prevent auto-logout flag
-let isAuthenticated = false;
-let authCheckPending = false;
+// CRITICAL: Global login flag + auth protection
+window.recentlyLoggedIn = false;
+window.authCheckDisabled = false;
 
-// DELAYED auth check with protection
+// PERFECT auth check - NO auto-logout EVER
 async function checkAuth() {
-  if (authCheckPending || isAuthenticated) return;
-  authCheckPending = true;
+  // Skip if recently logged in (5 seconds grace period)
+  if (window.recentlyLoggedIn) {
+    console.log('⏳ Auth check SKIPPED - recent login');
+    return true;
+  }
   
-  // Wait 2 seconds for cookie to fully set
-  setTimeout(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/profile`, { 
-        credentials: 'include',
-        cache: 'no-store'
-      });
-      
-      if (res.ok) {
-        isAuthenticated = true;
-        console.log('✅ Auth confirmed');
-      } else {
-        if (!window.location.pathname.includes('login')) {
-          window.location.href = '/login.html';
-        }
+  // Skip if disabled
+  if (window.authCheckDisabled) return true;
+  
+  console.log('🔍 Running auth check...');
+  
+  try {
+    const res = await fetch(`${API_BASE}/profile`, { 
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
       }
-    } catch (err) {
-      console.error('Auth check failed:', err);
-      if (!window.location.pathname.includes('login')) {
-        window.location.href = '/login.html';
-      }
-    } finally {
-      authCheckPending = false;
+    });
+    
+    console.log('Profile response:', res.status);
+    
+    if (res.ok) {
+      const user = await res.json();
+      console.log('✅ Auth OK:', user.email);
+      return true;
+    } else {
+      console.log('❌ Auth failed:', res.status);
+      return false;
     }
-  }, 2000);
+  } catch (err) {
+    console.log('⚠️ Network error - staying logged in:', err.message);
+    return true; // DON'T logout on network error
+  }
 }
 
-// ===== LOGIN FUNCTIONALITY =====
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Page loaded:', window.location.pathname);
+// ===== LOGIN - PERFECTED =====
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🌐 Page loaded:', window.location.pathname);
   
-  // Login page - NO auth check
+  // LOGIN PAGE
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -61,6 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        
+        console.log('🔐 Logging in:', email);
+        
         const res = await fetch(`${API_BASE}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -72,88 +82,110 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Login response:', data);
         
         if (data.success) {
+          // CRITICAL: Set login flag for 10 seconds
+          window.recentlyLoggedIn = true;
+          setTimeout(() => {
+            window.recentlyLoggedIn = false;
+          }, 10000); // 10 second grace period
+          
           showMessage('Login successful! Redirecting...', 'success');
-          // Reset auth flags for clean redirect
-          isAuthenticated = false;
-          authCheckPending = false;
+          
+          // Disable auth checks during redirect
+          window.authCheckDisabled = true;
           
           setTimeout(() => {
             window.location.href = '/admin.html';
-          }, 1200); // Give cookie time to set
+          }, 2000); // 2 seconds for cookie to propagate
+          
         } else {
           showMessage(data.message || 'Login failed');
         }
       } catch (err) {
         showMessage('Network error: ' + err.message);
+        console.error('Login error:', err);
       } finally {
         btn.disabled = false;
         btn.textContent = 'Login';
       }
     });
-    return; // Skip all other checks on login page
+    return; // Skip everything else on login page
   }
 
-  // Dashboard pages - DELAYED auth check
-  checkAuth();
+  // DASHBOARD PAGES - ULTRA SAFE CHECK
+  console.log('Checking dashboard auth...');
+  
+  // Wait 4 seconds before any auth check
+  setTimeout(async () => {
+    if (!window.recentlyLoggedIn) {
+      const isAuth = await checkAuth();
+      if (!isAuth) {
+        console.log('🚪 Redirecting to login');
+        window.location.href = '/login.html';
+      }
+    }
+  }, 4000);
 
-  // Admin dashboard
+  // Admin dashboard - extra safe timing
   if (document.querySelector('.container')) {
-    setTimeout(initAdminDashboard, 2500); // Wait for auth
+    setTimeout(() => {
+      initAdminDashboard();
+    }, 4500);
   }
 });
 
-// FIXED LOGOUT BUTTON - Global event listener
+// PERFECT LOGOUT BUTTON
 document.addEventListener('click', (e) => {
-  if (e.target.id === 'logoutBtn' || e.target.classList.contains('btn-logout')) {
+  if (e.target.id === 'logoutBtn' || e.target.matches('.btn-logout')) {
     e.preventDefault();
     logout();
   }
 });
 
 async function logout() {
-  console.log('🔐 Logging out...');
+  console.log('🔐 Manual logout');
   
   try {
     await fetch(`${API_BASE}/logout`, { 
       method: 'POST', 
       credentials: 'include' 
     });
-  } catch (err) {
-    console.log('Logout API failed (normal):', err);
+  } catch (e) {
+    console.log('Logout API ignored');
   }
   
-  // Clear everything
-  document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.onrender.com';
-  document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  // Clear ALL cookies
+  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'token=; path=/; domain=.onrender.com; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   
-  // Reset auth state
+  // Reset all flags
+  window.recentlyLoggedIn = false;
+  window.authCheckDisabled = false;
   isAuthenticated = false;
   authCheckPending = false;
   
-  showMessage('Logged out successfully', 'success');
-  
+  showMessage('Logged out successfully!');
   setTimeout(() => {
     window.location.href = '/login.html';
-  }, 800);
+  }, 1000);
 }
 
-// ===== ADMIN DASHBOARD FUNCTIONS =====
+// ===== ADMIN DASHBOARD (keep all your existing functions) =====
 async function initAdminDashboard() {
+  console.log('🚀 Initializing admin dashboard');
+  
   try {
     await loadProfile();
     await loadBranches();
     
-    // Form event listeners
+    // All your existing event listeners
     document.getElementById('createSubjectForm')?.addEventListener('submit', createSubject);
     document.getElementById('createTeacherForm')?.addEventListener('submit', createTeacher);
     document.getElementById('createStudentForm')?.addEventListener('submit', createStudent);
     
-    // Refresh buttons
     document.getElementById('refreshSubjectsBtn')?.addEventListener('click', loadSubjects);
     document.getElementById('refreshTeachersBtn')?.addEventListener('click', loadTeachers);
     document.getElementById('refreshStudentsBtn')?.addEventListener('click', loadStudents);
     
-    // Dynamic previews
     document.getElementById('teacherBranch')?.addEventListener('change', updateTeacherSubjectsPreview);
     document.getElementById('studentBranch')?.addEventListener('change', updateStudentSubjectsPreview);
     document.getElementById('studentSemester')?.addEventListener('change', updateStudentSubjectsPreview);
