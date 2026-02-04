@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👨‍🎓 Student Dashboard - College ERP</title>
+    <style>
+        /* 🔥 EXACT SAME STYLES - NO CHANGES */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+        .navbar { 
+            background: white; padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .user-badge { background: #28a745; color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; }
+        .logout-btn { background: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: 600; }
+        
+        .dashboard-container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        
+        .student-profile { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; border-radius: 20px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .profile-header { text-align: center; margin-bottom: 30px; }
+        .profile-avatar { width: 90px; height: 90px; margin: 0 auto 15px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; }
+        
+        .profile-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .info-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); }
+        .info-label { display: block; font-size: 0.8em; opacity: 0.8; }
+        .info-value { font-weight: 600; font-size: 1.05em; }
+
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-top: 30px; }
+        .data-card { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 30px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .data-card h3 { 
+            color: #2d3748; 
+            margin-bottom: 20px; 
+            font-size: 1.4em; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+        }
+        
+        .table-container { max-height: 400px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+        th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 12px; text-align: left; font-weight: 600; position: sticky; top: 0; }
+        td { padding: 14px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        tr:hover { background: rgba(102,126,234,0.05); }
+        
+        .status-present { color: #10b981; font-weight: bold; }
+        .status-absent { color: #ef4444; font-weight: bold; }
+        .grade-badge { padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85em; }
+        
+        .action-btn { padding: 12px 25px; border-radius: 25px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin: 5px; }
+        .primary { background: #10b981; color: white; }
+        .action-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        
+        .message { padding: 15px 25px; border-radius: 12px; margin: 20px 0; font-weight: 500; text-align: center; }
+        .message.success { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid #10b981; }
+        .message.error { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; }
+        
+        @media (max-width: 768px) {
+            .data-grid { grid-template-columns: 1fr; }
+            .profile-info { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 🔥 EXACT NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <h2>👨‍🎓 Student Portal</h2>
+            <span id="currentUserId" class="user-badge">Student</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn"> Logout</button>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- 🔥 EXACT PROFILE CARD -->
+        <div class="student-profile">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <span style="font-size: 40px;">👨‍🎓</span>
+                </div>
+                <h2 id="profileName">Loading Student...</h2>
+            </div>
+            
+            <!-- 🔥 EXACT PROFILE INFO GRID -->
+            <div class="profile-info">
+                <div class="info-item">
+                    <span class="info-label">Roll No</span>
+                    <span class="info-value" id="profileRollNo">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Branch</span>
+                    <span class="info-value" id="profileBranch">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Email</span>
+                    <span class="info-value" id="profileEmail">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Semester</span>
+                    <span class="info-value" id="profileSemester">-</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button id="refreshAllBtn" class="action-btn primary">🔄 Refresh All Data</button>
+            </div>
+        </div>
+
+        <!-- 🔥 DATA CARDS GRID -->
+        <div class="data-grid">
+            <!-- ATTENDANCE -->
+            <div class="data-card">
+                <h3>📊 My Attendance</h3>
+                <div style="margin-bottom: 20px;">
+                    <button id="loadAttendanceBtn" class="action-btn primary"> Refresh</button>
+                    <span id="attendanceSummary" style="font-weight: 600; color: #4a5568; margin-left: 15px;">Loading...</span>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Class</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceBody">
+                            <tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">Loading attendance...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MARKS -->
+            <div class="data-card">
+                <h3>📚 My Marks</h3>
+                <button id="loadMarksBtn" class="action-btn primary" style="margin-bottom: 20px;"> Refresh Marks</button>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Marks</th>
+                                <th>Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marksBody">
+                            <tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">Loading marks...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUBJECTS & TEACHERS -->
+        <div class="data-grid">
+            <!-- SUBJECTS -->
+            <div class="data-card">
+                <h3>📖 My Subjects</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Branch</th>
+                                <th>Semester</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subjectsBody">
+                            <tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">Loading subjects...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TEACHERS -->
+            <div class="data-card">
+                <h3>👨‍🏫 My Teachers</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Subjects</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teachersBody">
+                            <tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">Loading teachers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="message" class="message" style="display: none;"></div>
+
+    <script src="./js/script.js"></script>
+</body>
+</html>

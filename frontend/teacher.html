@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👨‍🏫 Teacher Dashboard - College ERP</title>
+    <style>
+        /* 🔥 EXACT SAME STYLES - NO style.css DEPENDENCY */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+        .navbar { 
+            background: white; padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .user-badge { background: #28a745; color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; }
+        .logout-btn { background: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: 600; }
+        
+        .dashboard-container { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
+        
+        .teacher-profile { 
+             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; border-radius: 20px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .profile-header { text-align: center; margin-bottom: 30px; }
+        .profile-avatar { width: 90px; height: 90px; margin: 0 auto 15px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; }
+        
+        .profile-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .info-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); }
+        .info-label { display: block; font-size: 0.8em; opacity: 0.8; }
+        .info-value { font-weight: 600; font-size: 1.05em; }
+
+        .section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-top: 30px; }
+        .data-card { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 30px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .data-card h3 { 
+            color: #2d3748; 
+            margin-bottom: 20px; 
+            font-size: 1.4em; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+        }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group input, .form-group select { 
+            width: 100%; padding: 14px 16px; border: 1px solid #d1d5db; border-radius: 12px; 
+            font-size: 16px; transition: all 0.3s ease; background: white;
+        }
+        .form-group input:focus, .form-group select:focus { 
+            outline: none; border-color: #629af4; box-shadow: 0 0 0 3px rgba(240,147,251,0.1);
+        }
+        
+        #classSubjectsPreview { 
+            border-left: 4px solid #f3e8ff; padding: 15px; margin: 15px 0; border-radius: 0 12px 12px 0; 
+            background: linear-gradient(135deg, #f3e8ff 0%, #fae7ff 100%); font-size: 14px; line-height: 1.5; 
+            max-height: 100px; overflow-y: auto; box-shadow: 0 4px 15px rgba(240,147,251,0.1);
+        }
+        
+        .table-container { max-height: 400px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+        th {  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  color: white; padding: 15px 12px; text-align: left; font-weight: 600; position: sticky; top: 0; }
+        td { padding: 14px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        tr:hover { background: rgba(240,147,251,0.05); }
+        
+        .attendance-radio { 
+            display: inline-flex; align-items: center; margin: 0 8px; cursor: pointer; 
+            padding: 10px 15px; border-radius: 25px; transition: all 0.3s; font-weight: 500;
+        }
+        .attendance-radio input[type="radio"] { 
+            margin-right: 8px; transform: scale(1.3); accent-color: #10b981; 
+        }
+        .attendance-radio:hover { background: rgba(16,185,129,0.1); }
+        .attendance-radio input:checked + span { color: #10b981; font-weight: bold; }
+        
+        .marks-input { 
+            width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #d1d5db; 
+            text-align: center; font-weight: bold; font-size: 18px; transition: all 0.3s;
+            background: #f8fafc;
+        }
+        .marks-input:focus { 
+            outline: none; border-color: #85b5f8; box-shadow: 0 0 0 4px rgba(240,147,251,0.15);
+            transform: scale(1.02); background: white;
+        }
+        
+        .status-present { color: #10b981; font-weight: bold; }
+        .status-absent { color: #ef4444; font-weight: bold; }
+        
+        .action-btn { 
+            padding: 14px 28px; border-radius: 25px; border: none; cursor: pointer; 
+            font-weight: 600; transition: all 0.3s ease; font-size: 1em; margin: 5px;
+            width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .btn-primary { background: linear-gradient(45deg, #10b981, #059669); color: white; }
+        .btn-secondary { background: linear-gradient(45deg, #6b7280, #4b5563); color: white; }
+        .btn-success {  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  color: white; }
+        .action-btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+        .submit-ready { 
+            animation: pulse 2s infinite; 
+            box-shadow: 0 0 30px rgba(16,185,129,0.6) !important; 
+            background: linear-gradient(45deg, #10b981, #059669) !important;
+        }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.02); } }
+        
+        .message { padding: 15px 25px; border-radius: 12px; margin: 20px auto; font-weight: 500; text-align: center; max-width: 600px; }
+        .message.success { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid #10b981; }
+        .message.error { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; }
+        
+        @media (max-width: 768px) {
+            .section-grid { grid-template-columns: 1fr; }
+            .profile-info { grid-template-columns: 1fr; }
+            .card-header { flex-direction: column; gap: 15px; align-items: stretch; }
+            .dashboard-container { padding: 0 15px; margin: 20px auto; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 🔥 EXACT NAVBAR - IDENTICAL TO REFERENCE -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <h2>👨‍🏫 Teacher Portal</h2>
+            <span id="currentUserId" class="user-badge">Teacher</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn"> Logout</button>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- 🔥 PROFILE - IDENTICAL STRUCTURE -->
+        <div class="teacher-profile">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <span style="font-size: 40px;">👨‍🏫</span>
+                </div>
+                <h2 id="teacherName">Loading Teacher...</h2>
+            </div>
+            
+            <div class="profile-info">
+                <div class="info-item">
+                    <span class="info-label">Name</span>
+                    <span class="info-value" id="profileName">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Email</span>
+                    <span class="info-value" id="profileEmail">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Branch</span>
+                    <span class="info-value" id="profileBranch">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Salary</span>
+                    <span class="info-value" id="profileSalary">₹0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔥 CREATE CLASS + CLASSES TABLE -->
+        <div class="section-grid">
+            <!-- CREATE CLASS -->
+            <div class="data-card">
+                <div class="card-header">
+                    <h3>📝 Create New Class</h3>
+                    <button onclick="loadTeacherClasses()" class="action-btn btn-secondary">Refresh</button>
+                </div>
+                
+                <div class="form-group">
+                    <input id="className" placeholder="Class Name (e.g., DBMS Sem-3, Math-101)">
+                </div>
+                
+                <div class="form-group">
+                    <select id="classBranch">
+                        <option value="">Select Branch (Auto-loads...)</option>
+                    </select>
+                </div>
+                
+                <div id="classSubjectsPreview">Select branch to preview subjects</div>
+                
+                <button id="createClassBtn" class="action-btn btn-primary">➕ Create Class</button>
+                <div id="classIdDisplay"></div>
+            </div>
+
+            <!-- CLASSES TABLE -->
+            <div class="data-card">
+                <div class="card-header">
+                    <h3>📚 My Classes</h3>
+                    <button onclick="loadTeacherClasses()" class="action-btn btn-secondary"> Refresh Classes</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Class Name</th>
+                                <th>ID</th>
+                                <th>Students</th>
+                                <th>Branch</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classesTableBody">
+                            <tr><td colspan="6" style="text-align: center; padding: 40px; color: #718096;">Loading classes...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔥 ATTENDANCE + MARKS -->
+        <div class="section-grid">
+            <!-- ATTENDANCE -->
+            <div id="attendanceSection" class="data-card">
+                <div class="card-header">
+                    <h3>📋 Mark Attendance</h3>
+                    <span id="attendanceClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;">No class selected</span>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Roll No</th><th>Name</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="attendanceStudentsBody">
+                            <tr><td colspan="3" style="text-align:center; color:#718096; padding: 30px;">Click "Attendance" button on any class</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button id="submitAttendanceBtn" class="action-btn btn-success" disabled> Submit Attendance</button>
+            </div>
+
+            <!-- MARKS -->
+            <div id="marksSection" class="data-card">
+                <div class="card-header">
+                    <h3>✏️ Enter Marks</h3>
+                    <span id="marksClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;">No class selected</span>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Roll No</th><th>Name</th><th>Marks (0-100)</th></tr>
+                        </thead>
+                        <tbody id="marksStudentsBody">
+                            <tr><td colspan="3" style="text-align:center; color:#718096; padding: 30px;">Click "Marks" button on any class</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button id="submitMarksBtn" class="action-btn btn-success" disabled>Submit Marks</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="message" class="message" style="display: none;"></div>
+
+    <script src="./js/script.js"></script>
+</body>
+</html>
