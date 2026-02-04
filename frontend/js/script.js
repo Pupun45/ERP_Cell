@@ -152,7 +152,7 @@ async function updateTeacherSubjectsPreview() {
 }
 
 // 🔥 STUDENT CASCADE - Branch → Semesters → Subjects
-// 🔥 FIXED: Student Branch → Semesters AUTO-LOAD
+// 🔥 FIXED: Handle SINGLE OBJECT from /subjects/CSE endpoint
 async function updateStudentSemesters(branch) {
   const semesterSelect = document.getElementById('studentSemester');
   if (!semesterSelect || !branch) return;
@@ -163,25 +163,30 @@ async function updateStudentSemesters(branch) {
   try {
     console.log('🔍 Fetching semesters for branch:', branch);
     
-    // Get ALL subjects for this branch
     const res = await fetch(`${API_BASE}/subjects/${branch}`, { credentials: 'include' });
     const data = await res.json();
     console.log('📚 Raw API data:', data);
     
-    // Extract UNIQUE semesters from your API response
-    const semesters = [...new Set(data.map(item => item.semester))];
+    // 🔥 FIX: Handle BOTH array AND single object
+    let semesters = [];
+    if (Array.isArray(data)) {
+      // Multiple semester objects: [{semester: "1st Semester"}, {semester: "2nd Semester"}]
+      semesters = data.map(item => item.semester);
+    } else if (data && data.semester) {
+      // Single object: {semester: "All"} OR {semester: "1st Semester"}
+      semesters = [data.semester];
+    }
+    
     console.log('✅ Unique semesters found:', semesters);
     
-    // CLEAR and populate dropdown
+    // Populate dropdown
     semesterSelect.innerHTML = '<option value="">Select Semester</option>';
     
     semesters.forEach(semester => {
-      // API: "1st Semester" → Dropdown: value="1st" text="1st Semester"
-      const frontendValue = semester.replace(' Semester', ''); // "1st Semester" → "1st"
-      
+      const frontendValue = semester.replace(' Semester', '').replace('All', '1st');
       const option = document.createElement('option');
-      option.value = frontendValue;        // value="1st"
-      option.textContent = semester;       // display: "1st Semester"
+      option.value = frontendValue;        // "1st Semester" → value="1st"
+      option.textContent = semester;       // display: "1st Semester" OR "All"
       semesterSelect.appendChild(option);
     });
     
@@ -199,6 +204,7 @@ async function updateStudentSemesters(branch) {
     semesterSelect.disabled = false;
   }
 }
+
 
 
 async function updateStudentSubjectsPreview() {
