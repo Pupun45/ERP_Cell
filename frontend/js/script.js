@@ -264,21 +264,6 @@ async function initAdminDashboard() {
 }
 
 // TEACHER DASHBOARD
-async function initTeacherDashboard() {
-  console.log('Initializing teacher dashboard');
-  try {
-    await loadTeacherProfile();
-    await loadTeacherBranches();
-    
-    document.getElementById('createClassBtn')?.addEventListener('click', createTeacherClass);
-    document.getElementById('classBranch')?.addEventListener('change', updateClassSubjectsPreview);
-    document.getElementById('refreshAllBtn')?.addEventListener('click', loadTeacherProfile);
-    
-    loadTeacherClasses();
-  } catch (err) {
-    console.error('Teacher dashboard init error:', err);
-  }
-}
 
 async function loadTeacherProfile() {
   try {
@@ -297,15 +282,22 @@ async function loadTeacherProfile() {
   }
 }
 
+// FIXED loadTeacherBranches - Safe array check
 async function loadTeacherBranches() {
   try {
     const res = await fetch(`${API_BASE}/branches`, { credentials: 'include' });
-    const branches = await res.json();
+    const data = await res.json();
+    
+    // ✅ SAFE: Check if array
+    if (!Array.isArray(data)) {
+      console.error('Branches response not an array:', data);
+      return;
+    }
     
     const branchSelect = document.getElementById('classBranch');
     if (branchSelect) {
       branchSelect.innerHTML = '<option value="">Select Branch</option>';
-      branches.forEach(branch => {
+      data.forEach(branch => {
         const option = document.createElement('option');
         option.value = branch;
         option.textContent = branch;
@@ -314,8 +306,76 @@ async function loadTeacherBranches() {
     }
   } catch (err) {
     console.error('Teacher branches load error:', err);
+    showMessage('Failed to load branches', 'error');
   }
 }
+
+// FIXED loadTeacherClasses - Safe array check
+async function loadTeacherClasses() {
+  try {
+    const res = await fetch(`${API_BASE}/classes`, { credentials: 'include' });
+    const data = await res.json();
+    
+    // ✅ SAFE: Check if array
+    if (!Array.isArray(data)) {
+      console.error('Classes response not an array:', data);
+      if (document.getElementById('classesTableBody')) {
+        document.getElementById('classesTableBody').innerHTML = 
+          '<tr><td colspan="6" style="text-align:center;padding:40px;">No classes found</td></tr>';
+      }
+      return;
+    }
+    
+    const tbody = document.getElementById('classesTableBody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      data.forEach(cls => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+          <td>${cls.name}</td>
+          <td>${cls._id.slice(-6)}</td>
+          <td>${cls.students?.length || 0}</td>
+          <td>${cls.branch}</td>
+          <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" onclick="loadAttendance('${cls._id}')">Attendance</button>
+            <button class="btn btn-success btn-sm" onclick="loadMarks('${cls._id}')">Marks</button>
+          </td>
+        `;
+      });
+    }
+  } catch (err) {
+    console.error('Classes load error:', err);
+    showMessage('Failed to load classes', 'error');
+  }
+}
+
+// FIXED initTeacherDashboard - Error handling
+async function initTeacherDashboard() {
+  console.log('Initializing teacher dashboard');
+  try {
+    await loadTeacherProfile();
+    
+    // Load branches with fallback
+    await loadTeacherBranches().catch(err => {
+      console.error('Branches failed:', err);
+      showMessage('Branches unavailable', 'error');
+    });
+    
+    // Setup event listeners
+    document.getElementById('createClassBtn')?.addEventListener('click', createTeacherClass);
+    document.getElementById('classBranch')?.addEventListener('change', updateClassSubjectsPreview);
+    document.getElementById('refreshAllBtn')?.addEventListener('click', loadTeacherProfile);
+    
+    // Load classes with fallback
+    await loadTeacherClasses().catch(err => {
+      console.error('Classes failed:', err);
+    });
+  } catch (err) {
+    console.error('Teacher dashboard init error:', err);
+  }
+}
+
 
 async function createTeacherClass() {
   const className = document.getElementById('className').value;
@@ -348,33 +408,6 @@ async function createTeacherClass() {
   }
 }
 
-async function loadTeacherClasses() {
-  try {
-    const res = await fetch(`${API_BASE}/classes`, { credentials: 'include' });
-    const classes = await res.json();
-    
-    const tbody = document.getElementById('classesTableBody');
-    if (tbody) {
-      tbody.innerHTML = '';
-      classes.forEach(cls => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-          <td>${cls.name}</td>
-          <td>${cls._id.slice(-6)}</td>
-          <td>${cls.students?.length || 0}</td>
-          <td>${cls.branch}</td>
-          <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
-          <td>
-            <button class="action-btn btn-primary" onclick="loadAttendance('${cls._id}')">Attendance</button>
-            <button class="action-btn btn-success" onclick="loadMarks('${cls._id}')">Marks</button>
-          </td>
-        `;
-      });
-    }
-  } catch (err) {
-    console.error('Classes load error:', err);
-  }
-}
 
 // STUDENT DASHBOARD
 async function initStudentDashboard() {

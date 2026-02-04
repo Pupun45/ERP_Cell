@@ -65,6 +65,15 @@ const studentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const Student = mongoose.model('Student', studentSchema);
+// Add this schema BEFORE routes
+const classSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  branch: { type: String, required: true },
+  teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher' },
+  students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
+  createdAt: { type: Date, default: Date.now }
+});
+const Class = mongoose.model('Class', classSchema);
 
 // FIXED createAdmin FUNCTION - MOVED UP
 async function createAdmin() {
@@ -230,11 +239,46 @@ app.post('/api/logout', (req, res) => {
 });
 
 // ===== ADMIN ROUTES =====
+// 🔥 TEACHER ROUTES - Role-based access
 app.get('/api/branches', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
+    // ✅ Allow teachers + admin
+    if (req.user.role !== 'admin' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
     const branches = await Subject.distinct('branch');
     res.json(branches || []);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 🔥 CLASSES ROUTES - Teacher access
+app.get('/api/classes', auth, async (req, res) => {
+  try {
+    // ✅ Allow teachers
+    if (req.user.role !== 'admin' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    const classes = await Class.find({}).sort({ createdAt: -1 });
+    res.json(classes || []);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/classes', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    const { name, branch } = req.body;
+    const newClass = new Class({ name, branch });
+    await newClass.save();
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
