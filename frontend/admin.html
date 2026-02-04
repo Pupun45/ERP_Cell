@@ -14,6 +14,34 @@
     .btn-secondary:hover { background: #4b5563; }
     .form-actions { display: flex; gap: 10px; align-items: center; }
     .me-1 { margin-right: 4px; }
+    
+    /* 🔥 PERFECT SUBJECTS PREVIEW STYLING */
+    .subjects-preview {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 4px solid #10b981;
+      font-size: 14px;
+      min-height: 24px;
+      transition: all 0.3s ease;
+    }
+    .subjects-preview.loading { 
+      background: linear-gradient(135deg, #fef3c7, #fde68a); 
+      border-left-color: #f59e0b; 
+    }
+    .subjects-preview.empty { 
+      background: linear-gradient(135deg, #fef2f2, #fecaca); 
+      border-left-color: #ef4444; 
+    }
+    .subjects-preview.success { 
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7); 
+      border-left-color: #10b981; 
+    }
+    .btn-primary { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-danger { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+    .btn-danger:hover { background: #dc2626; }
   </style>
 </head>
 <body>
@@ -32,42 +60,51 @@
         <h3>📚 Manage Subjects</h3>
         <form id="createSubjectForm">
           <input id="subjectBranch" placeholder="Branch (MCA/BCA/CSE)" required>
-          <input id="subjectSemester" placeholder="Semester (1st/2nd/3rd)" required>
-          <input id="subjectNames" placeholder="Subjects (comma separated): Cloud, AI, Big Data" required>
+          <select id="subjectSemester" required>
+            <option value="">Select Semester</option>
+            <option value="1st">1st Semester</option>
+            <option value="2nd">2nd Semester</option>
+            <option value="3rd">3rd Semester</option>
+            <option value="4th">4th Semester</option>
+          </select>
+          <input id="subjectNames" placeholder="Subjects: Cloud, AI, Big Data" required>
           <div class="form-actions">
-            <button type="submit"> Add Subjects</button>
-            <button type="button" onclick="cancelEdit()">Cancel</button>
+            <button type="submit">Add Subjects</button>
+            <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
           </div>
         </form>
-        <div id="subjectPreview" style="margin-top: 10px; padding: 8px; background: #f0f9ff; border-radius: 6px; font-size: 14px; border-left: 4px solid #10b981;"></div>
+        <div id="subjectPreview" style="margin-top: 10px; padding: 8px; background: #f0f9ff; border-radius: 6px; font-size: 14px; border-left: 4px solid #3b82f6; display: none;"></div>
       </div>
 
-      <!-- CREATE TEACHER -->
+      <!-- CREATE TEACHER - ✅ FIXED PREVIEW -->
       <div class="card">
         <h3>👨‍🏫 Manage Teachers</h3>
         <form id="createTeacherForm">
           <input id="teacherName" placeholder="Full Name" required>
           <input id="teacherEmail" type="email" placeholder="teacher@college.com" required>
-          <input id="teacherPassword" type="password" placeholder="Password (leave empty to keep current)" required>
+          <input id="teacherPassword" type="password" placeholder="Leave empty for auto-generate">
           <select id="teacherBranch" required>
             <option value="">Loading Branches...</option>
           </select>
           <input id="teacherSalary" type="number" placeholder="Salary (₹)" min="0" required>
+          <!-- 🔥 TEACHER SUBJECTS PREVIEW - CORRECT ID & CLASS -->
+          <div id="teacherSubjectsPreview" class="subjects-preview">
+            <strong>📚 Subjects:</strong> <span>Select branch to see subjects</span>
+          </div>
           <div class="form-actions">
             <button type="submit">Create Teacher</button>
-            <button type="button" onclick="cancelEdit()"> Cancel</button>
+            <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
           </div>
         </form>
-        <div id="teacherSubjectsPreview" style="margin-top: 10px; padding: 8px; background: #f0fdf4; border-radius: 6px; font-size: 14px; border-left: 4px solid #10b981;"></div>
       </div>
 
-      <!-- CREATE STUDENT -->
+      <!-- CREATE STUDENT - ✅ FIXED PREVIEW -->
       <div class="card">
         <h3>👨‍🎓 Manage Students</h3>
         <form id="createStudentForm">
           <input id="studentName" placeholder="Full Name" required>
           <input id="studentEmail" type="email" placeholder="student@college.com" required>
-          <input id="studentPassword" type="password" placeholder="Password (leave empty to keep current)" required>
+          <input id="studentPassword" type="password" placeholder="Leave empty for auto-generate">
           <input id="studentRollNo" placeholder="Roll No (MCA21A001)" required>
           <select id="studentBranch" required>
             <option value="">Loading Branches...</option>
@@ -79,12 +116,13 @@
             <option value="3rd">3rd Semester</option>
             <option value="4th">4th Semester</option>
           </select>
-          <div id="subjectsPreview" style="background: linear-gradient(135deg, #f0f8ff, #e0f2fe); padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3b82f6; font-size: 14px;">
-            <strong>Subjects: </strong><span id="subjectsList">-- Select Branch + Semester --</span>
+          <!-- 🔥 STUDENT SUBJECTS PREVIEW - CORRECT ID & CLASS -->
+          <div id="subjectsList" class="subjects-preview">
+            <strong>📚 Subjects:</strong> <span>-- Select Branch + Semester --</span>
           </div>
           <div class="form-actions">
-            <button type="submit"> Create Student</button>
-            <button type="button"  onclick="cancelEdit()"> Cancel</button>
+            <button type="submit">Create Student</button>
+            <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
           </div>
         </form>
       </div>
@@ -94,7 +132,7 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>📚 Subjects List</h3>
-        <button id="refreshSubjectsBtn" >🔄  Refresh</button>
+        <button id="refreshSubjectsBtn" class="btn btn-primary">🔄 Refresh</button>
       </div>
       <div class="table-container">
         <table>
@@ -118,7 +156,7 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>👨‍🏫 Teachers List</h3>
-        <button id="refreshTeachersBtn" >🔄 Refresh</button>
+        <button id="refreshTeachersBtn" class="btn btn-primary">🔄 Refresh</button>
       </div>
       <div class="table-container">
         <table>
@@ -143,7 +181,7 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>👨‍🎓 Students List</h3>
-        <button id="refreshStudentsBtn" >🔄 Refresh</button>
+        <button id="refreshStudentsBtn" class="btn btn-primary">🔄 Refresh</button>
       </div>
       <div class="table-container">
         <table>
