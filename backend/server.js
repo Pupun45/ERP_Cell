@@ -19,18 +19,12 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// MongoDB
-// OLD (causes warnings)
-mongoose.connect(process.env.MONGO_URI, { 
-  useNewUrlParser: true, 
-  useUnifiedTopology: true 
-})
-
-// NEW (clean - no warnings)
+// MongoDB - CLEAN (no warnings)
 mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch(err => console.error('❌ MongoDB error:', err));
 
-
-// User Schema
+// ===== SCHEMAS =====
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -38,7 +32,38 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// Create default admin if not exists
+const subjectSchema = new mongoose.Schema({
+  branch: { type: String, required: true },
+  semester: { type: String, required: true },
+  subjects: [{ type: String }],
+  createdAt: { type: Date, default: Date.now }
+});
+const Subject = mongoose.model('Subject', subjectSchema);
+
+const teacherSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  branch: { type: String, required: true },
+  salary: { type: Number, required: true },
+  subjects: [{ type: String }],
+  createdAt: { type: Date, default: Date.now }
+});
+const Teacher = mongoose.model('Teacher', teacherSchema);
+
+const studentSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  rollNo: { type: String, required: true, unique: true },
+  branch: { type: String, required: true },
+  semester: { type: String, required: true },
+  subjects: [{ type: String }],
+  createdAt: { type: Date, default: Date.now }
+});
+const Student = mongoose.model('Student', studentSchema);
+
+// Create default admin
 async function createAdmin() {
   const adminExists = await User.findOne({ role: 'admin' });
   if (!adminExists) {
@@ -59,7 +84,7 @@ const auth = (req, res, next) => {
   });
 };
 
-// Routes
+// ===== AUTH ROUTES =====
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -74,7 +99,7 @@ app.post('/api/login', async (req, res) => {
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
-    res.json({ success: true, role: user.role, redirect: user.role + '.html' });
+    res.json({ success: true, role: user.role, redirect: `${user.role}.html` });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -90,11 +115,81 @@ app.get('/api/profile', auth, async (req, res) => {
   res.json(user);
 });
 
-// Protected admin route example
-app.get('/api/admin/users', auth, async (req, res) => {
+// ===== SUBJECTS ROUTES =====
+app.get('/api/subjects', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  const users = await User.find({}).select('-password');
-  res.json(users);
+  const subjects = await Subject.find().sort({ createdAt: -1 });
+  res.json(subjects);
+});
+
+app.post('/api/subjects', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const { branch, semester, subjects } = req.body;
+    const subjectData = new Subject({ branch, semester, subjects: subjects.split(',').map(s => s.trim()) });
+    await subjectData.save();
+    res.json({ success: true, subject: subjectData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.get('/api/branches', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  const branches = await Subject.distinct('branch');
+  res.json(branches);
+});
+
+// ===== TEACHERS ROUTES =====
+app.get('/api/teachers', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  const teachers = await Teacher.find().sort({ createdAt: -1 });
+  res.json(teachers);
+});
+
+app.post('/api/teachers', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const { name, email, password, branch, salary } = req.body;
+    const hashed = await bcrypt.hash(password, 12);
+    const subjects = await Subject.findOne({ branch, semester: '1st' })?.subjects || [];
+    
+    const teacher = new Teacher({ 
+      name, email, password: hashed, branch, salary, 
+      subjects, 
+      createdAt: new Date()
+    });
+    await teacher.save();
+    res.json({ success: true, teacher });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ===== STUDENTS ROUTES =====
+app.get('/api/students', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  const students = await Student.find().sort({ createdAt: -1 });
+  res.json(students);
+});
+
+app.post('/api/students', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const { name, email, password, rollNo, branch, semester } = req.body;
+    const hashed = await bcrypt.hash(password, 12);
+    const subjects = await Subject.findOne({ branch, semester })?.subjects || [];
+    
+    const student = new Student({ 
+      name, email, password: hashed, rollNo, branch, semester, 
+      subjects,
+      createdAt: new Date()
+    });
+    await student.save();
+    res.json({ success: true, student });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Health check
@@ -105,7 +200,10 @@ const startServer = async () => {
   await createAdmin();
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`✅ Login: admin@collegeerp.com / admin123`);
+    console.log(`✅ Admin: admin@collegeerp.com / admin123`);
+    console.log(`✅ Frontend: ${process.env.FRONTEND_URL || 'localhost:3000'}`);
+    console.log(`✅ APIs ready: /api/subjects, /api/teachers, /api/students`);
   });
 };
+
 startServer();
