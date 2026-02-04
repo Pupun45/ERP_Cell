@@ -126,6 +126,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // LOGIN - Most critical
+// FIXED LOGIN - Check ALL user types
 app.post('/api/login', async (req, res) => {
   try {
     console.log('LOGIN attempt:', req.body.email);
@@ -140,19 +141,31 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // ✅ FIXED: Check ALL 3 collections
+    let user = await User.findOne({ email: email.toLowerCase() });
+    let userType = 'admin';
+    
+    if (!user) {
+      user = await Teacher.findOne({ email: email.toLowerCase() });
+      userType = 'teacher';
+    }
+    
+    if (!user) {
+      user = await Student.findOne({ email: email.toLowerCase() });
+      userType = 'student';
+    }
+    
     if (!user || !await bcrypt.compare(password, user.password)) {
       console.log('Invalid credentials for:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const token = jwt.sign(
-      { id: user._id, role: user.role }, 
+      { id: user._id, role: userType, type: userType }, 
       process.env.JWT_SECRET, 
       { expiresIn: '7d' }
     );
 
-    // FIXED COOKIES - Cross-domain Vercel→Render
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -160,13 +173,15 @@ app.post('/api/login', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    console.log('LOGIN SUCCESS:', user.role);
+    console.log('LOGIN SUCCESS:', userType, email);
     res.json({ 
       success: true, 
       user: {
         id: user._id,
         email: user.email,
-        role: user.role
+        role: userType,
+        name: user.name || 'User',
+        [userType === 'teacher' ? 'salary' : 'rollNo']: user.salary || user.rollNo
       }
     });
     
@@ -176,32 +191,42 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.post('/api/logout', (req, res) => {
-  res.clearCookie('token');
-  res.clearCookie('token', { path: '/' });
-  res.json({ success: true });
-});
-
+// FIXED PROFILE - Return correct user data
 app.get('/api/profile', auth, async (req, res) => {
   try {
     let user;
     
-    // Check Teacher profile
-    user = await Teacher.findById(req.user.id).select('-password');
-    if (user) return res.json(user);
+    // Check Teacher first
+    if (req.user.type === 'teacher' || req.user.role === 'teacher') {
+      user = await Teacher.findById(req.user.id).select('-password');
+    } 
+    // Check Student
+    else if (req.user.type === 'student' || req.user.role === 'student') {
+      user = await Student.findById(req.user.id).select('-password');
+    } 
+    // Check Admin
+    else {
+      user = await User.findById(req.user.id).select('-password');
+    }
     
-    // Check Student profile
-    user = await Student.findById(req.user.id).select('-password');
-    if (user) return res.json(user);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
     
-    // Check Admin profile
-    user = await User.findById(req.user.id).select('-password');
-    if (user) return res.json(user);
+    // Add role for consistency
+    user.role = req.user.role || req.user.type;
     
-    return res.status(404).json({ message: 'User not found' });
+    res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Profile error' });
   }
+});
+
+
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('token');
+  res.clearCookie('token', { path: '/' });
+  res.json({ success: true });
 });
 
 // ===== ADMIN ROUTES =====

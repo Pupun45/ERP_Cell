@@ -161,21 +161,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = await res.json();
         console.log('Login response:', data);
         
-        if (data.success) {
-          window.recentlyLoggedIn = true;
-          setTimeout(() => window.recentlyLoggedIn = false, 10000);
-          
-          if (data.user.role === 'teacher') {
-            showMessage('Welcome Teacher! Redirecting...', 'success');
-            setTimeout(() => window.location.href = '/teacher.html', 1500);
-          } else if (data.user.role === 'student') {
-            showMessage('Welcome Student! Redirecting...', 'success');
-            setTimeout(() => window.location.href = '/student.html', 1500);
-          } else {
-            showMessage('Welcome Admin! Redirecting...', 'success');
-            setTimeout(() => window.location.href = '/admin.html', 1500);
-          }
-        } else {
+      // In login success - Handle full user object
+if (data.success) {
+  window.recentlyLoggedIn = true;
+  setTimeout(() => window.recentlyLoggedIn = false, 10000);
+  
+  // ✅ FIXED: Use data.user.role
+  const role = data.user.role;
+  
+  if (role === 'teacher') {
+    showMessage(`Welcome ${data.user.name || 'Teacher'}!`, 'success');
+    setTimeout(() => window.location.href = '/teacher.html', 1500);
+  } else if (role === 'student') {
+    showMessage(`Welcome ${data.user.name || 'Student'}!`, 'success');
+    setTimeout(() => window.location.href = '/student.html', 1500);
+  } else {
+    showMessage(`Welcome Admin!`, 'success');
+    setTimeout(() => window.location.href = '/admin.html', 1500);
+  }
+}
+ else {
           showMessage(data.message || 'Login failed');
         }
       } catch (err) {
