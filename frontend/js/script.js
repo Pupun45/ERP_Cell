@@ -792,6 +792,45 @@ function loadStudentMarks() {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">No marks data available</td></tr>';
   }
 }
+// 🔥 FIXED: Debug + Fallback subjects preview
+async function updateTeacherSubjectsPreview() {
+  const branch = document.getElementById('teacherBranch')?.value;
+  const previewEl = document.getElementById('teacherSubjectsPreview');
+  
+  if (!branch || !previewEl) return;
+  
+  previewEl.className = 'subjects-preview loading';
+  previewEl.innerHTML = '<strong>📚 Subjects:</strong> <span>Loading...</span>';
+  
+  try {
+    console.log('🔍 Fetching subjects for:', branch, '/1st');
+    const res = await fetch(`${API_BASE}/subjects/${branch}/1st`, { 
+      credentials: 'include' 
+    });
+    
+    if (!res.ok) {
+      throw new Error(`API ${res.status}: ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    console.log('✅ Subjects loaded:', data);
+    
+    if (data.subjects && Array.isArray(data.subjects) && data.subjects.length > 0) {
+      previewEl.className = 'subjects-preview success';
+      previewEl.innerHTML = `
+        <strong>📚 ${data.subjects.length} subjects:</strong> 
+        ${data.subjects.slice(0, 3).join(', ')}${data.subjects.length > 3 ? '...' : ''}
+      `;
+    } else {
+      previewEl.className = 'subjects-preview empty';
+      previewEl.innerHTML = '<strong>📚 No subjects</strong> for this branch';
+    }
+  } catch (err) {
+    console.error('❌ Subjects preview ERROR:', err);
+    previewEl.className = 'subjects-preview empty';
+    previewEl.innerHTML = '<strong>📚 Error:</strong> ' + err.message;
+  }
+}
 
 function loadStudentSubjects() {
   const tbody = document.getElementById('subjectsBody');
