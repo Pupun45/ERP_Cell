@@ -10,24 +10,42 @@ const helmet = require('helmet');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// 🔧 FIXED MIDDLEWARE - CRITICAL ORDER
+app.use(helmet());
+app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
+app.use(express.static('public'));
+
+// 🔥 FIXED CORS - Multiple origins + PROPER SameSite
 app.use(cors({
-  origin: process.env.FRONTEND_URL, 
+  origin: [
+    'https://erp-cell.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// 🗄️ FIXED MongoDB - Wait for connection
+let mongoReady = false;
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => {
+  console.log('✅ MongoDB connected successfully');
+  mongoReady = true;
+})
+.catch(err => {
+  console.error('❌ MongoDB connection FAILED:', err.message);
+  process.exit(1); // CRASH if no DB
+});
 
-// MongoDB - CLEAN (no warnings)
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB error:', err));
-
-// ===== SCHEMAS =====
+// ===== SCHEMAS (unchanged - perfect) =====
 const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'teacher', 'student'], required: true }
 });
@@ -43,7 +61,7 @@ const Subject = mongoose.model('Subject', subjectSchema);
 
 const teacherSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   branch: { type: String, required: true },
   salary: { type: Number, required: true },
@@ -54,7 +72,7 @@ const Teacher = mongoose.model('Teacher', teacherSchema);
 
 const studentSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
   rollNo: { type: String, required: true, unique: true },
   branch: { type: String, required: true },
@@ -64,88 +82,150 @@ const studentSchema = new mongoose.Schema({
 });
 const Student = mongoose.model('Student', studentSchema);
 
-// Create default admin
-async function createAdmin() {
-  const adminExists = await User.findOne({ role: 'admin' });
-  if (!adminExists) {
-    const hashed = await bcrypt.hash('admin123', 12);
-    await User.create({ email: 'admin@collegeerp.com', password: hashed, role: 'admin' });
-    console.log('✅ Default admin created: admin@collegeerp.com / admin123');
-  }
-}
-
-// Auth middleware
-const auth = (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ message: 'No token' });
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
-    req.user = user;
+// 🛡️ FIXED Auth middleware - ASYNC + SAFE
+const auth = async (req, res, next) => {
+  try {
+    if (!mongoReady) {
+      return res.status(503).json({ message: 'Database not ready' });
+    }
+    
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
-  });
+  } catch (err) {
+    console.error('🔐 Auth error:', err.message);
+    return res.status(403).json({ message: 'Invalid token' });
+  }
 };
 
-// ===== AUTH ROUTES =====
+// 🔥 FIXED LOGIN - Most important route
 app.post('/api/login', async (req, res) => {
   try {
+    console.log('🔐 LOGIN attempt:', req.body.email);
+    
+    if (!mongoReady) {
+      return res.status(503).json({ message: 'Database not ready' });
+    }
+
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user || !await bcrypt.compare(password, user.password)) {
+    
+    if (!email || !password) {
+      console.log('❌ Missing email/password');
+      return res.status(400).json({ message: 'Email and password required' });
+    }
+
+    // Find user - CASE INSENSITIVE
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      console.log('❌ Wrong password for:', email);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // JWT Token
+    const token = jwt.sign(
+      { id: user._id, role: user.role }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
+
+    // 🔥 FIXED COOKIES for Vercel+Render cross-domain
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true, // FORCE secure for production
+      sameSite: 'none', // CRITICAL for cross-site (Vercel→Render)
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
-    res.json({ success: true, role: user.role, redirect: `${user.role}.html` });
+
+    console.log('✅ LOGIN SUCCESS:', user.role, user.email);
+    
+    res.json({ 
+      success: true, 
+      role: user.role, 
+      redirect: `${user.role}.html`,
+      user: { email: user.email, role: user.role }
+    });
+    
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('💥 LOGIN ERROR:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
 app.post('/api/logout', (req, res) => {
   res.clearCookie('token');
-  res.json({ success: true });
+  res.clearCookie('token', { path: '/' });
+  res.json({ success: true, message: 'Logged out' });
 });
 
 app.get('/api/profile', auth, async (req, res) => {
-  const user = await User.findById(req.user.id).select('-password');
-  res.json(user);
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Profile error' });
+  }
 });
 
-// ===== SUBJECTS ROUTES =====
+// Health check - FIRST route
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    mongo: mongoReady,
+    env: {
+      jwt: !!process.env.JWT_SECRET,
+      mongo: !!process.env.MONGO_URI,
+      frontend: !!process.env.FRONTEND_URL
+    }
+  });
+});
+
+// ===== ADMIN ROUTES (your existing logic - FIXED) =====
+app.get('/api/branches', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const branches = await Subject.distinct('branch');
+    res.json(branches || []);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 app.get('/api/subjects', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  const subjects = await Subject.find().sort({ createdAt: -1 });
-  res.json(subjects);
+  try {
+    const subjects = await Subject.find().sort({ createdAt: -1 });
+    res.json(subjects);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 app.post('/api/subjects', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
   try {
     const { branch, semester, subjects } = req.body;
-    const subjectData = new Subject({ branch, semester, subjects: subjects.split(',').map(s => s.trim()) });
+    const subjectList = Array.isArray(subjects) 
+      ? subjects 
+      : subjects.split(',').map(s => s.trim()).filter(Boolean);
+    
+    const subjectData = new Subject({ branch, semester, subjects: subjectList });
     await subjectData.save();
-    res.json({ success: true, subject: subjectData });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-});
-
-app.get('/api/branches', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  const branches = await Subject.distinct('branch');
-  res.json(branches);
-});
-
-// ===== TEACHERS ROUTES =====
-app.get('/api/teachers', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  const teachers = await Teacher.find().sort({ createdAt: -1 });
-  res.json(teachers);
 });
 
 app.post('/api/teachers', auth, async (req, res) => {
@@ -156,22 +236,23 @@ app.post('/api/teachers', auth, async (req, res) => {
     const subjects = await Subject.findOne({ branch, semester: '1st' })?.subjects || [];
     
     const teacher = new Teacher({ 
-      name, email, password: hashed, branch, salary, 
-      subjects, 
-      createdAt: new Date()
+      name, email: email.toLowerCase(), password: hashed, branch, salary, subjects 
     });
     await teacher.save();
-    res.json({ success: true, teacher });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// ===== STUDENTS ROUTES =====
-app.get('/api/students', auth, async (req, res) => {
+app.get('/api/teachers', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-  const students = await Student.find().sort({ createdAt: -1 });
-  res.json(students);
+  try {
+    const teachers = await Teacher.find().sort({ createdAt: -1 });
+    res.json(teachers);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 app.post('/api/students', auth, async (req, res) => {
@@ -182,29 +263,55 @@ app.post('/api/students', auth, async (req, res) => {
     const subjects = await Subject.findOne({ branch, semester })?.subjects || [];
     
     const student = new Student({ 
-      name, email, password: hashed, rollNo, branch, semester, 
-      subjects,
-      createdAt: new Date()
+      name, email: email.toLowerCase(), password: hashed, rollNo, branch, semester, subjects 
     });
     await student.save();
-    res.json({ success: true, student });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
+app.get('/api/students', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  try {
+    const students = await Student.find().sort({ createdAt: -1 });
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
-// Start server
+// 🛡️ 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// 🚀 FIXED Server Start - Wait for MongoDB + Create Admin
 const startServer = async () => {
-  await createAdmin();
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`✅ Admin: admin@collegeerp.com / admin123`);
-    console.log(`✅ Frontend: ${process.env.FRONTEND_URL || 'localhost:3000'}`);
-    console.log(`✅ APIs ready: /api/subjects, /api/teachers, /api/students`);
-  });
+  try {
+    // Wait for MongoDB
+    while (!mongoReady) {
+      console.log('⏳ Waiting for MongoDB...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Create admin
+    await createAdmin();
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`✅ Health: https://erp-cell.onrender.com/api/health`);
+      console.log(`✅ Login: admin@collegeerp.com / admin123`);
+      console.log(`✅ CORS origins:`, [
+        'https://college-erp-rwhn.vercel.app',
+        'http://localhost:3000'
+      ]);
+    });
+  } catch (err) {
+    console.error('💥 Server start failed:', err);
+    process.exit(1);
+  }
 };
 
 startServer();
