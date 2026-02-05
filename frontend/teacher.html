@@ -174,27 +174,37 @@
         <!-- 🔥 CREATE CLASS + CLASSES TABLE -->
         <div class="section-grid">
             <!-- CREATE CLASS -->
-            <div class="data-card">
-                <div class="card-header">
-                    <h3>📝 Create New Class</h3>
-                    <button onclick="loadTeacherClasses()" class="action-btn-r btn-secondary">Refresh</button>
-                </div>
-                
-                <div class="form-group">
-                    <input id="className" placeholder="Class Name (e.g., DBMS Sem-3, Math-101)">
-                </div>
-                
-                <div class="form-group">
-                    <select id="classBranch">
-                        <option value="">Select Branch (Auto-loads...)</option>
-                    </select>
-                </div>
-                
-                <div id="classSubjectsPreview">Select branch to preview subjects</div>
-                
-                <button id="createClassBtn" class="action-btn btn-primary">➕ Create Class</button>
-                <div id="classIdDisplay"></div>
-            </div>
+            <!-- CREATE CLASS -->
+<div class="data-card">
+  <div class="card-header">
+      <h3>📝 Create New Class</h3>
+      <button onclick="loadTeacherClasses()" class="action-btn-r btn-secondary">Refresh</button>
+  </div>
+  
+  <div class="form-group">
+      <input id="className" placeholder="Class Name (e.g., DBMS Sem-3, Math-101)">
+  </div>
+  
+  <!-- 🔥 BRANCH → SEMESTER → SUBJECTS CASCADE -->
+  <div class="form-group">
+      <select id="classBranch" required>
+          <option value="">🔄 Loading Branches...</option>
+      </select>
+  </div>
+  
+  <div class="form-group">
+      <select id="classSemester" style="display: none;">
+          <option value="">Select Semester</option>
+      </select>
+  </div>
+  
+  <!-- 🔥 SUBJECTS PREVIEW -->
+  <div id="classSubjectsPreview" style="border-left: 4px solid #f3e8ff; padding: 15px; margin: 15px 0; border-radius: 0 12px 12px 0; background: linear-gradient(135deg, #f3e8ff 0%, #fae7ff 100%); font-size: 14px;">Select branch first</div>
+  
+  <button id="createClassBtn" class="action-btn btn-primary" disabled>➕ Create Class</button>
+  <div id="classIdDisplay"></div>
+</div>
+
 
             <!-- CLASSES TABLE -->
             <div class="data-card">

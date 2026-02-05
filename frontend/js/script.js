@@ -736,6 +736,91 @@ async function editTeacher(id) {
     showMessage('❌ Failed to load teacher data', 'error');
   }
 }
+// 🔥 TEACHER CLASS CASCADE: Branch → Semester → Subjects Preview
+async function updateClassSemesters(branch) {
+  const semesterSelect = document.getElementById('classSemester');
+  const previewEl = document.getElementById('classSubjectsPreview');
+  
+  if (!semesterSelect || !branch) {
+    semesterSelect.style.display = 'none';
+    return;
+  }
+  
+  semesterSelect.style.display = 'block';
+  semesterSelect.disabled = true;
+  semesterSelect.innerHTML = '<option value="">⏳ Loading semesters...</option>';
+  
+  try {
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
+    const subjects = await res.json();
+    
+    const semesters = [...new Set(subjects.map(item => item.semester))].sort();
+    semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+    
+    semesters.forEach(semester => {
+      const option = document.createElement('option');
+      option.value = semester;
+      option.textContent = semester;
+      semesterSelect.appendChild(option);
+    });
+    
+    semesterSelect.disabled = false;
+    
+    // Show semesters preview
+    previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
+    
+  } catch (err) {
+    semesterSelect.innerHTML = '<option value="">No semesters</option>';
+    semesterSelect.disabled = false;
+  }
+}
+
+async function updateClassSubjectsPreview() {
+  const branch = document.getElementById('classBranch')?.value;
+  const semester = document.getElementById('classSemester')?.value;
+  const previewEl = document.getElementById('classSubjectsPreview');
+  
+  if (!branch || !semester || !previewEl) return;
+  
+  previewEl.innerHTML = '🔄 Loading subjects...';
+  
+  try {
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}&semester=${encodeURIComponent(semester)}`, { credentials: 'include' });
+    const data = await res.json();
+    
+    if (data.length > 0 && data[0]?.subjects) {
+      const subjects = data[0].subjects;
+      previewEl.innerHTML = `
+        <strong>✅ ${subjects.length} subjects:</strong><br>
+        <small>${subjects.join(', ')}</small>
+      `;
+      document.getElementById('createClassBtn').disabled = false;
+    } else {
+      previewEl.innerHTML = '<strong>❌ No subjects found</strong>';
+      document.getElementById('createClassBtn').disabled = true;
+    }
+  } catch (err) {
+    previewEl.innerHTML = '<strong>❌ Error loading subjects</strong>';
+    document.getElementById('createClassBtn').disabled = true;
+  }
+}
+
+// 🔥 Load branches for class creation
+async function loadTeacherBranches() {
+  try {
+    const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
+    const subjects = await res.json();
+    const branches = [...new Set(subjects.map(s => s.branch))].sort();
+    
+    const select = document.getElementById('classBranch');
+    if (select) {
+      select.innerHTML = '<option value="">Select Branch</option>' + 
+        branches.map(b => `<option value="${b}">${b}</option>`).join('');
+    }
+  } catch (err) {
+    console.error('Branches load failed:', err);
+  }
+}
 
 
 
@@ -758,46 +843,62 @@ async function loadTeacherProfile() {
 
 async function loadTeacherClasses() {
   try {
-    const res = await fetch(`${API_BASE}/classes`, { credentials: 'include' });
-    const data = await res.json();
+    const profileRes = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+    const teacher = await profileRes.json();
+    const teacherBranch = teacher.branch;
     
-    if (!Array.isArray(data)) {
-      if (document.getElementById('classesTableBody')) {
-        document.getElementById('classesTableBody').innerHTML = 
-          '<tr><td colspan="6" style="text-align:center;padding:40px;">No classes found</td></tr>';
-      }
+    const res = await fetch(`${API_BASE}/classes`, { credentials: 'include' });
+    const classes = await res.json();
+    
+    if (!Array.isArray(classes)) {
+      document.getElementById('classesTableBody').innerHTML = 
+        '<tr><td colspan="6" style="text-align:center;padding:40px;">No classes found</td></tr>';
       return;
     }
     
     const tbody = document.getElementById('classesTableBody');
-    if (tbody) {
-      tbody.innerHTML = '';
-      data.forEach(cls => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-          <td>${cls.name}</td>
-          <td>${cls._id.slice(-6)}</td>
-          <td>${cls.students?.length || 0}</td>
-          <td>${cls.branch}</td>
-          <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
-          <td>
-            <button class="btn btn-primary btn-sm" onclick="loadAttendance('${cls._id}')">Attendance</button>
-            <button class="btn btn-success btn-sm" onclick="loadMarks('${cls._id}')">Marks</button>
-          </td>
-        `;
-      });
+    tbody.innerHTML = '';
+    
+    for (const cls of classes) {
+      // 🔥 FILTER: Only show students from teacher's branch
+      let studentCount = 0;
+      if (cls.students && cls.students.length > 0) {
+        // Fetch students and count matching branch
+        try {
+          const studentsRes = await fetch(`${API_BASE}/students?branch=${encodeURIComponent(teacherBranch)}`, { credentials: 'include' });
+          const allStudents = await studentsRes.json();
+          studentCount = allStudents.filter(s => cls.students.includes(s._id)).length;
+        } catch (err) {
+          studentCount = cls.students.length; // Fallback
+        }
+      }
+      
+      const row = tbody.insertRow();
+      row.innerHTML = `
+        <td><strong>${cls.name}</strong></td>
+        <td>${cls._id.slice(-6)}</td>
+        <td>${studentCount}</td>
+        <td>${cls.branch}</td>
+        <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
+        <td>
+          <button class="action-btn-r btn-primary" onclick="loadAttendance('${cls._id}')">📋 Attendance</button>
+          <button class="action-btn-r btn-success" onclick="loadMarks('${cls._id}')">✏️ Marks</button>
+        </td>
+      `;
     }
   } catch (err) {
     console.error('Classes load error:', err);
   }
 }
 
+
 async function createTeacherClass() {
-  const className = document.getElementById('className')?.value;
+  const className = document.getElementById('className')?.value.trim();
   const branch = document.getElementById('classBranch')?.value;
+  const semester = document.getElementById('classSemester')?.value;
   
-  if (!className || !branch) {
-    showMessage('Please fill class name and branch', 'error');
+  if (!className || !branch || !semester) {
+    showMessage('Please fill class name, branch & semester', 'error');
     return;
   }
   
@@ -806,14 +907,21 @@ async function createTeacherClass() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ name: className, branch })
+      body: JSON.stringify({ 
+        name: className, 
+        branch, 
+        semester  // 🔥 Include semester
+      })
     });
     
     const data = await res.json();
     if (data.success || res.ok) {
-      showMessage('Class created successfully!', 'success');
+      showMessage(`✅ Class "${className}" created! ID: ${data.classId?.slice(-6)}`, 'success');
       document.getElementById('className').value = '';
       document.getElementById('classBranch').value = '';
+      document.getElementById('classSemester').value = '';
+      document.getElementById('classSubjectsPreview').innerHTML = 'Class created successfully!';
+      document.getElementById('createClassBtn').disabled = true;
       loadTeacherClasses();
     } else {
       showMessage(data.message || 'Failed to create class', 'error');
@@ -822,6 +930,7 @@ async function createTeacherClass() {
     showMessage('Network error: ' + err.message, 'error');
   }
 }
+
 
 // 🔥 STUDENT FUNCTIONS (unchanged)
 async function loadStudentProfile() {
@@ -1014,16 +1123,17 @@ document.getElementById('subjectBranch')?.addEventListener('input', (e) => {
 async function initTeacherDashboard() {
   console.log('🔥 Initializing Teacher Dashboard');
   await loadTeacherProfile();
-  await loadTeacherBranches();
+  await loadTeacherBranches();  // 🔥 Load branches for class form
   await loadTeacherClasses();
   
-  document.getElementById('createClassBtn')?.addEventListener('click', createTeacherClass);
-  document.getElementById('classBranch')?.addEventListener('change', updateClassSubjectsPreview);
-  document.getElementById('refreshAllBtn')?.addEventListener('click', () => {
-    loadTeacherProfile();
-    loadTeacherClasses();
+  // 🔥 EVENT LISTENERS for cascade
+  document.getElementById('classBranch')?.addEventListener('change', (e) => {
+    updateClassSemesters(e.target.value);
   });
+  document.getElementById('classSemester')?.addEventListener('change', updateClassSubjectsPreview);
+  document.getElementById('createClassBtn')?.addEventListener('click', createTeacherClass);
 }
+
 
 async function initStudentDashboard() {
   console.log('🔥 Initializing Student Dashboard');
