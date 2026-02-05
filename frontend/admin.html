@@ -132,21 +132,22 @@ input[required] {
       <!-- ADD NEW SUBJECTS -->
       <div class="card">
         <h3>📚 Manage Subjects</h3>
-        <form id="createSubjectForm">
-          <input id="subjectBranch" placeholder="Branch (CSE/MBA)" required list="branchSuggestions">
-          <datalist id="branchSuggestions"></datalist>
-          <select id="subjectSemester" class="semester-select" required>
-            <option value="">🔄 Select Branch First</option>
-          </select>
-          <input id="subjectNames" placeholder="Subjects: DSA, OS, DBMS" required>
-          <div id="subjectPreview" class="subjects-preview empty">
-            <strong>📚 Subjects:</strong> <span>Type branch to load semesters</span>
-          </div>
-          <div class="form-actions">
-            <button class="btn-primary" type="submit">Add Subjects</button>
-            <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
-          </div>
-        </form>
+       <form id="createSubjectForm">
+  <input id="subjectBranch" placeholder="Branch (e.g., CSE, MBA)" required>
+  <select id="subjectSemester" class="semester-select" required>
+    <option value="">Select Semester</option>
+    <option value="1st">1st Semester</option>
+    <option value="2nd">2nd Semester</option>
+    <option value="3rd">3rd Semester</option>
+    <option value="4th">4th Semester</option>
+  </select>
+  <input id="subjectNames" placeholder="Subjects: DSA, OS, DBMS" required>
+  <div id="subjectPreview" class="subjects-preview">
+    <strong>📚 Subjects:</strong> <span>Enter branch + semester</span>
+  </div>
+  <button class="btn-primary" type="submit">Add Subjects</button>
+</form>
+
       </div>
 
       <!-- CREATE TEACHER - 🔥 BRANCH → SEMESTERS → SUBJECTS -->

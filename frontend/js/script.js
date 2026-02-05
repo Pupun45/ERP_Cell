@@ -62,7 +62,14 @@ async function loadBranches() {
     const studentBranch = document.getElementById('studentBranch');
     const classBranch = document.getElementById('classBranch');
     const subjectBranch = document.getElementById('subjectBranch');
-    
+    const subjectSemester = document.getElementById('subjectSemester');
+    if (subjectBranch) {
+  subjectBranch.addEventListener('input', updateSubjectPreview);
+}
+
+if (subjectSemester) {
+  subjectSemester.addEventListener('change', updateSubjectPreview);
+}
     [teacherBranch, studentBranch, classBranch, subjectBranch].forEach(dropdown => {
       if (dropdown && !dropdown.hasAttribute('data-loaded')) {
         if (dropdown.tagName === 'SELECT') {
@@ -269,21 +276,20 @@ const branchSubjectsCache = {};
 
 // 🔥 SUBJECT CREATE PREVIEW
 async function updateSubjectPreview() {
-  const branch = document.getElementById('subjectBranch')?.value;
+  const branch = document.getElementById('subjectBranch')?.value.trim();
   const semester = document.getElementById('subjectSemester')?.value;
   const previewEl = document.getElementById('subjectPreview');
   
   if (!branch || !semester || !previewEl) return;
   
-  const subjectsInput = document.getElementById('subjectNames')?.value;
-  previewEl.style.display = 'block';
-  
-  if (subjectsInput) {
-    const subjects = subjectsInput.split(',').map(s => s.trim()).filter(Boolean);
-    previewEl.className = 'subjects-preview success';
-    previewEl.innerHTML = `<strong>✅ Preview:</strong> ${subjects.join(', ')} (${subjects.length} subjects)`;
-  }
+  previewEl.className = 'subjects-preview success';
+  previewEl.innerHTML = `
+    <strong>✅ Creating:</strong> 
+    <span>${branch} - ${semester} 
+    <small style="color: #10b981;">(Ready to save)</small></span>
+  `;
 }
+
 
 
 async function editSubject(id, subjectData) {
@@ -551,55 +557,44 @@ async function createSubject(e) {
   btn.disabled = true;
   
   try {
-    const branch = document.getElementById('subjectBranch').value;
-    const semester = document.getElementById('subjectSemester').value;
+    const branch = document.getElementById('subjectBranch').value.trim();
+    const semesterSelect = document.getElementById('subjectSemester').value;
     const subjectsInput = document.getElementById('subjectNames').value;
     
-    let url = `${API_BASE}/subjects`;
-    let method = 'POST';
+    // 🔥 ANY BRANCH + SEMESTER allowed (no validation)
+    const formData = {
+      branch: branch,  // Free text: CSE, MBA, ECE, etc.
+      semester: `${semesterSelect} Semester`,  // Always "X Semester"
+      subjects: subjectsInput.split(',').map(s => s.trim()).filter(Boolean)
+    };
     
-    if (editingType === 'subject' && editingId) {
-      const checkRes = await fetch(`${API_BASE}/subjects/${editingId}`, { credentials: 'include' });
-      if (!checkRes.ok) {
-        showMessage('⚠️ Subjects were deleted. Create new ones.', 'info');
-        cancelEdit();
-        btn.disabled = false;
-        return;
-      }
-      url = `${API_BASE}/subjects/${editingId}`;
-      method = 'PUT';
-    }
-
+    let url = `${API_BASE}/subjects`;
+    let method = editingType === 'subject' && editingId ? 'PUT' : 'POST';
+    if (editingId) url += `/${editingId}`;
+    
     const res = await fetch(url, {
-      method: method,
+      method,
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ 
-        branch, 
-        semester: SEMESTER_MAP[semester] || semester, 
-        subjects: subjectsInput.split(',').map(s => s.trim()).filter(Boolean) 
-      })
+      body: JSON.stringify(formData)
     });
-
-    const data = await res.json();
-    if (data.success || res.ok) {
-      showMessage(editingId ? '✅ Subjects updated!' : '✅ Subjects created!', 'success');
+    
+    if (res.ok) {
+      showMessage(editingId ? '✅ Subjects updated!' : '✅ Subjects added!', 'success');
       e.target.reset();
-      const previewEl = document.getElementById('subjectPreview');
-      if (previewEl) previewEl.style.display = 'none';
-      editingId = null;
-      editingType = null;
-      btn.textContent = 'Add Subjects';
+      document.getElementById('subjectPreview').style.display = 'none';
       loadSubjectsTable();
+      cancelEdit();
     } else {
-      showMessage(data.message || 'Failed to save subjects', 'error');
+      showMessage('Failed to save subjects', 'error');
     }
   } catch (err) {
-    showMessage('❌ Network error: ' + err.message, 'error');
+    showMessage('Network error', 'error');
   } finally {
     btn.disabled = false;
   }
 }
+
 
 // 🔥 1. FIXED loadTeachersTable() - Pass FULL data
 async function loadTeachersTable() {
