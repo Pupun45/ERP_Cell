@@ -262,18 +262,116 @@ app.get('/api/subjects', auth, async (req, res) => {
 });
 
 // 6. Create subjects
+// 🔥 COMPLETE SUBJECTS API ROUTES
+app.get('/api/subjects', auth, async (req, res) => {
+  try {
+    const { branch } = req.query;
+    let filter = {};
+    
+    if (branch) {
+      filter.branch = { $regex: new RegExp(branch, 'i') }; // Case-insensitive partial match
+    }
+    
+    const subjects = await Subject.find(filter).sort({ branch: 1, semester: 1 });
+    res.json(subjects);
+  } catch (err) {
+    console.error('❌ Subjects fetch error:', err);
+    res.status(500).json({ message: 'Failed to fetch subjects' });
+  }
+});
+
 app.post('/api/subjects', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin only' });
+  }
+  
+  try {
+    const { branch, semester, subjects } = req.body;
+    
+    // 🔥 Validation
+    if (!branch || !semester || !subjects) {
+      return res.status(400).json({ message: 'Branch, semester, and subjects required' });
+    }
+    
+    const subjectList = Array.isArray(subjects) 
+      ? subjects 
+      : subjects.split(',').map(s => s.trim()).filter(Boolean);
+    
+    if (subjectList.length === 0) {
+      return res.status(400).json({ message: 'At least one subject required' });
+    }
+    
+    // 🔥 Check if already exists
+    const existing = await Subject.findOne({ branch, semester });
+    if (existing) {
+      return res.status(400).json({ 
+        message: `Subjects already exist for ${branch} ${semester}`,
+        existing: true 
+      });
+    }
+    
+    const subjectData = new Subject({ 
+      branch: branch.trim(), 
+      semester: semester.trim(), 
+      subjects: subjectList 
+    });
+    
+    await subjectData.save();
+    
+    console.log('✅ New subjects created:', branch, semester, subjectList);
+    res.json({ 
+      success: true, 
+      message: `${subjectList.length} subjects added for ${branch} ${semester}`,
+      data: subjectData 
+    });
+  } catch (err) {
+    console.error('❌ Subjects creation error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 🔥 DELETE SUBJECTS (for table actions)
+app.delete('/api/subjects/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin only' });
+  }
+  
+  try {
+    const subject = await Subject.findByIdAndDelete(req.params.id);
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+    
+    console.log('🗑️ Subject deleted:', subject.branch, subject.semester);
+    res.json({ success: true, message: 'Subject deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// 🔥 UPDATE SUBJECTS (optional)
+app.put('/api/subjects/:id', auth, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin only' });
+  }
+  
   try {
     const { branch, semester, subjects } = req.body;
     const subjectList = Array.isArray(subjects) 
       ? subjects 
       : subjects.split(',').map(s => s.trim()).filter(Boolean);
     
-    const subjectData = new Subject({ branch, semester, subjects: subjectList });
-    await subjectData.save();
-    console.log('✅ New subjects created:', branch, semester);
-    res.json({ success: true });
+    const updated = await Subject.findByIdAndUpdate(
+      req.params.id,
+      { branch, semester, subjects: subjectList },
+      { new: true }
+    );
+    
+    if (!updated) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+    
+    res.json({ success: true, data: updated });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -495,7 +593,6 @@ const startServer = async () => {
   try {
     let attempts = 0;
     while (!mongoReady && attempts < 30) {
-      console.log(`⏳ Waiting for MongoDB... (${attempts + 1}/30)`);
       await new Promise(resolve => setTimeout(resolve, 1000));
       attempts++;
     }
@@ -507,14 +604,12 @@ const startServer = async () => {
     await createAdmin();
     
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\n🚀 Server running on port ${PORT}`);
-      console.log(`✅ Health: https://erp-cell.onrender.com/api/health`);
-      console.log(`🔐 Login: admin@collegeerp.com / admin123`);
-      console.log(`📚 Subjects API: /api/subjects/CSE/1st ✅`);
-      console.log(`🎉 All APIs ready!`);
+      console.log(` Server running on port ${PORT}`);
+      console.log(` Health: https://erp-cell.onrender.com/api/health`);
+      console.log(`Login: admin@collegeerp.com / admin123`);
     });
   } catch (err) {
-    console.error('❌ Server start failed:', err.message);
+    console.error(' Server start failed:', err.message);
     process.exit(1);
   }
 };

@@ -42,6 +42,22 @@
     .btn-primary:hover { background: #2563eb; }
     .btn-danger { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
     .btn-danger:hover { background: #dc2626; }
+    
+    /* NEW: Loading spinner */
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -55,28 +71,33 @@
     </header>
     
     <div class="grid">
-      <!-- ADD NEW SUBJECTS -->
+      <!-- ADD NEW SUBJECTS - 🔥 AUTO SEMESTER POPULATION -->
       <div class="card">
         <h3>📚 Manage Subjects</h3>
         <form id="createSubjectForm">
-          <input id="subjectBranch" placeholder="Branch (MCA/BCA/CSE)" required>
+          <input id="subjectBranch" placeholder="Branch (MCA/BCA/MBA)" required list="branchSuggestions">
+          <datalist id="branchSuggestions"></datalist>
+          
+          <!-- 🔥 DYNAMIC SEMESTER DROPDOWN -->
           <select id="subjectSemester" required>
-            <option value="">Select Semester</option>
-            <option value="1st">1st Semester</option>
-            <option value="2nd">2nd Semester</option>
-            <option value="3rd">3rd Semester</option>
-            <option value="4th">4th Semester</option>
+            <option value="">🔄 Loading Semesters...</option>
           </select>
+          
           <input id="subjectNames" placeholder="Subjects: Cloud, AI, Big Data" required>
+          
+          <!-- 🔥 DYNAMIC PREVIEW -->
+          <div id="subjectPreview" class="subjects-preview loading">
+            <span class="loading-spinner"></span>Select branch to load semesters & subjects
+          </div>
+          
           <div class="form-actions">
             <button type="submit">Add Subjects</button>
             <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
           </div>
         </form>
-        <div id="subjectPreview" style="margin-top: 10px; padding: 8px; background: #f0f9ff; border-radius: 6px; font-size: 14px; border-left: 4px solid #3b82f6; display: none;"></div>
       </div>
 
-      <!-- CREATE TEACHER - ✅ FIXED PREVIEW -->
+      <!-- CREATE TEACHER -->
       <div class="card">
         <h3>👨‍🏫 Manage Teachers</h3>
         <form id="createTeacherForm">
@@ -86,11 +107,18 @@
           <select id="teacherBranch" required>
             <option value="">Loading Branches...</option>
           </select>
+          
+          <!-- 🔥 DYNAMIC TEACHER SEMESTERS -->
+          <select id="teacherSemester" required style="display: none;">
+            <option value="">Select Semester</option>
+          </select>
+          
           <input id="teacherSalary" type="number" placeholder="Salary (₹)" min="0" required>
-          <!-- 🔥 TEACHER SUBJECTS PREVIEW - CORRECT ID & CLASS -->
+          
           <div id="teacherSubjectsPreview" class="subjects-preview">
-            <strong>📚 Subjects:</strong> <span>Select branch to see subjects</span>
+            <strong>📚 Subjects:</strong> <span>Select branch to see available semesters & subjects</span>
           </div>
+          
           <div class="form-actions">
             <button type="submit">Create Teacher</button>
             <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
@@ -98,28 +126,28 @@
         </form>
       </div>
 
-      <!-- CREATE STUDENT - ✅ FIXED PREVIEW -->
+      <!-- CREATE STUDENT -->
       <div class="card">
         <h3>👨‍🎓 Manage Students</h3>
         <form id="createStudentForm">
           <input id="studentName" placeholder="Full Name" required>
           <input id="studentEmail" type="email" placeholder="student@college.com" required>
           <input id="studentPassword" type="password" placeholder="Leave empty for auto-generate">
-          <input id="studentRollNo" placeholder="Roll No (MCA21A001)" required>
+          <input id="studentRollNo" placeholder="Roll No (MBA23A001)" required>
+          
           <select id="studentBranch" required>
             <option value="">Loading Branches...</option>
           </select>
+          
+          <!-- 🔥 DYNAMIC STUDENT SEMESTERS -->
           <select id="studentSemester" required>
-            <option value="">Select Semester</option>
-            <option value="1st">1st Semester</option>
-            <option value="2nd">2nd Semester</option>
-            <option value="3rd">3rd Semester</option>
-            <option value="4th">4th Semester</option>
+            <option value="">Select Branch First</option>
           </select>
-          <!-- 🔥 STUDENT SUBJECTS PREVIEW - CORRECT ID & CLASS -->
+          
           <div id="subjectsList" class="subjects-preview">
-            <strong>📚 Subjects:</strong> <span>-- Select Branch + Semester --</span>
+            <strong>📚 Subjects:</strong> <span>Select branch + semester</span>
           </div>
+          
           <div class="form-actions">
             <button type="submit">Create Student</button>
             <button type="button" class="btn-secondary" onclick="cancelEdit()">Cancel</button>
@@ -128,7 +156,7 @@
       </div>
     </div>
     
-    <!-- SUBJECTS DASHBOARD -->
+    <!-- TABLES REMAIN SAME -->
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>📚 Subjects List</h3>
@@ -152,7 +180,6 @@
       </div>
     </div>
     
-    <!-- TEACHERS TABLE -->
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>👨‍🏫 Teachers List</h3>
@@ -177,7 +204,6 @@
       </div>
     </div>
     
-    <!-- STUDENTS TABLE -->
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>👨‍🎓 Students List</h3>
@@ -202,7 +228,6 @@
       </div>
     </div>
     
-    <!-- MESSAGE -->
     <div id="message" style="margin-top: 1rem;"></div>
   </div>
 

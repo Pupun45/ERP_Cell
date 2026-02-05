@@ -222,15 +222,15 @@ function cancelEdit() {
 }
 
 // 🔥 ADMIN TABLE FUNCTIONS
+// 🔥 In your script.js - Add these for table actions
 async function loadSubjectsTable() {
   try {
-    const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
+    const res = await fetch('/api/subjects');
     const subjects = await res.json();
-    const tbody = document.getElementById('subjectsTableBody');
-    if (!tbody) return;
     
+    const tbody = document.getElementById('subjectsTableBody');
     if (subjects.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #718096; padding: 2rem;">No subjects found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#718096;">No subjects found</td></tr>';
       return;
     }
     
@@ -238,18 +238,71 @@ async function loadSubjectsTable() {
       <tr>
         <td><strong>${subject.branch}</strong></td>
         <td>${subject.semester}</td>
-        <td>${subject.subjects.slice(0, 3).join(', ')}${subject.subjects.length > 3 ? '...' : ''}</td>
+        <td>${subject.subjects.join(', ')}</td>
         <td>${new Date(subject.createdAt).toLocaleDateString()}</td>
         <td>
-          <button class="btn-warning btn-secondary me-1" onclick="editSubject('${subject._id}', ${JSON.stringify(subject).replace(/"/g, '&quot;')})">Edit</button>
-          <button class="btn-danger btn-secondary" onclick="deleteSubject('${subject._id}')">Delete</button>
+          <button onclick="editSubject('${subject._id}')" class="btn-warning me-1">Edit</button>
+          <button onclick="deleteSubject('${subject._id}')" class="btn-danger">Delete</button>
         </td>
       </tr>
     `).join('');
   } catch (err) {
-    console.error('Subjects table error:', err);
+    console.error('Load subjects error:', err);
   }
 }
+
+async function deleteSubject(id) {
+  if (!confirm('Delete this subjects entry?')) return;
+  
+  try {
+    const res = await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      loadSubjectsTable(); // Refresh table
+      showMessage('Subject deleted successfully!', 'success');
+    }
+  } catch (err) {
+    showMessage('Delete failed', 'error');
+  }
+}
+
+// 🔥 Connect subjects form
+document.getElementById('createSubjectForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const formData = {
+    branch: document.getElementById('subjectBranch').value,
+    semester: document.getElementById('subjectSemester').value,
+    subjects: document.getElementById('subjectNames').value
+  };
+  
+  try {
+    const res = await fetch('/api/subjects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+      showMessage(data.message || 'Subjects created successfully!', 'success');
+      document.getElementById('createSubjectForm').reset();
+      loadSubjectsTable();
+      // 🔥 Clear cache to refresh dropdowns
+      Object.keys(branchSemestersCache).forEach(key => delete branchSemestersCache[key]);
+    } else {
+      showMessage(data.message || 'Failed to create subjects', 'error');
+    }
+  } catch (err) {
+    showMessage('Network error', 'error');
+  }
+});
+
+// 🔥 Init on load
+document.addEventListener('DOMContentLoaded', () => {
+  loadSubjectsTable();
+  document.getElementById('refreshSubjectsBtn').onclick = loadSubjectsTable;
+});
+
 
 
 
