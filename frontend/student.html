@@ -18,6 +18,7 @@
         }
         .user-badge { background: #28a745; color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; }
         .logout-btn { background: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: 600; }
+        .logout-btn:hover { background: #ff3742; }
         
         .dashboard-container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
         
@@ -51,7 +52,7 @@
             gap: 10px;
         }
         
-        .table-container { max-height: 400px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); }
+        .table-container { max-height: 400px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
         th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 12px; text-align: left; font-weight: 600; position: sticky; top: 0; }
         td { padding: 14px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
@@ -60,14 +61,19 @@
         .status-present { color: #10b981; font-weight: bold; }
         .status-absent { color: #ef4444; font-weight: bold; }
         .grade-badge { padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85em; }
+        .grade-A { background: #10b981; color: white; }
+        .grade-B { background: #f59e0b; color: white; }
+        .grade-C { background: #f97316; color: white; }
+        .grade-F { background: #ef4444; color: white; }
         
-        .action-btn { padding: 12px 25px; border-radius: 25px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin: 5px; }
-        .primary { background: #10b981; color: white; }
-        .action-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        .action-btn { padding: 12px 25px; border-radius: 25px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .primary { background: linear-gradient(45deg, #10b981, #059669); color: white; }
+        .action-btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
         
-        .message { padding: 15px 25px; border-radius: 12px; margin: 20px 0; font-weight: 500; text-align: center; }
+        .message { padding: 15px 25px; border-radius: 12px; margin: 20px auto; font-weight: 500; text-align: center; max-width: 600px; }
         .message.success { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid #10b981; }
         .message.error { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .message.info { background: rgba(59,130,246,0.2); color: #3b82f6; border: 1px solid #3b82f6; }
         
         @media (max-width: 768px) {
             .data-grid { grid-template-columns: 1fr; }
@@ -82,7 +88,7 @@
             <h2>👨‍🎓 Student Portal</h2>
             <span id="currentUserId" class="user-badge">Student</span>
         </div>
-        <button id="logoutBtn" class="logout-btn"> Logout</button>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
     </nav>
 
     <div class="dashboard-container">
@@ -126,7 +132,7 @@
             <div class="data-card">
                 <h3>📊 My Attendance</h3>
                 <div style="margin-bottom: 20px;">
-                    <button id="loadAttendanceBtn" class="action-btn primary"> Refresh</button>
+                    <button id="loadAttendanceBtn" class="action-btn primary">Refresh</button>
                     <span id="attendanceSummary" style="font-weight: 600; color: #4a5568; margin-left: 15px;">Loading...</span>
                 </div>
                 <div class="table-container">
@@ -148,7 +154,7 @@
             <!-- MARKS -->
             <div class="data-card">
                 <h3>📚 My Marks</h3>
-                <button id="loadMarksBtn" class="action-btn primary" style="margin-bottom: 20px;"> Refresh Marks</button>
+                <button id="loadMarksBtn" class="action-btn primary" style="margin-bottom: 20px;">Refresh Marks</button>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -166,7 +172,7 @@
             </div>
         </div>
 
-        <!-- SUBJECTS & TEACHERS -->
+        <!-- SUBJECTS -->
         <div class="data-grid">
             <!-- SUBJECTS -->
             <div class="data-card">
@@ -186,12 +192,201 @@
                     </table>
                 </div>
             </div>
-            
         </div>
     </div>
 
     <div id="message" class="message" style="display: none;"></div>
 
-    <script src="./js/script.js"></script>
+    <!-- 🔥 COMPLETE STUDENT SCRIPT - SELF CONTAINED -->
+    <script>
+        const API_BASE = 'https://erp-cell.onrender.com/api';
+        let currentStudent = {};
+
+        // 🔥 UTILITY FUNCTIONS
+        function showMessage(text, type = 'error') {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = text;
+            msgEl.className = `message ${type}`;
+            msgEl.style.display = 'block';
+            setTimeout(() => msgEl.style.display = 'none', 5000);
+        }
+
+        function safeArray(data) {
+            if (!data) return [];
+            if (Array.isArray(data)) return data;
+            console.error('Not an array:', data);
+            return [];
+        }
+
+        function getGrade(marks) {
+            if (marks >= 90) return { grade: 'A', class: 'grade-A' };
+            if (marks >= 80) return { grade: 'B', class: 'grade-B' };
+            if (marks >= 70) return { grade: 'B+', class: 'grade-B' };
+            if (marks >= 60) return { grade: 'C', class: 'grade-C' };
+            return { grade: 'F', class: 'grade-F' };
+        }
+
+        // 🔥 LOAD STUDENT PROFILE
+        async function loadStudentProfile() {
+            try {
+                const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+                const student = await res.json();
+                currentStudent = student;
+                
+                document.getElementById('profileName').textContent = student.name || 'Student';
+                document.getElementById('profileRollNo').textContent = student.rollNo || 'N/A';
+                document.getElementById('profileBranch').textContent = student.branch || 'N/A';
+                document.getElementById('profileEmail').textContent = student.email || 'N/A';
+                document.getElementById('profileSemester').textContent = student.semester || 'N/A';
+                document.getElementById('currentUserId').textContent = student.rollNo || student.name || 'Student';
+                
+                console.log('✅ Student profile loaded:', student.name);
+            } catch (err) {
+                console.error('Profile error:', err);
+                showMessage('Failed to load profile', 'error');
+            }
+        }
+
+        // 🔥 LOAD SUBJECTS (Student's branch + semester)
+        async function loadStudentSubjects() {
+            try {
+                const branch = currentStudent.branch;
+                const semester = currentStudent.semester;
+                
+                if (!branch || !semester) {
+                    document.getElementById('subjectsBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;">Profile not loaded</td></tr>';
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
+                const subjectsData = await res.json();
+                const subjects = safeArray(subjectsData);
+                
+                const tbody = document.getElementById('subjectsBody');
+                if (subjects.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#718096;">No subjects found</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = subjects.map(subject => `
+                    <tr>
+                        <td><strong>${subject.subjects?.[0] || 'N/A'}</strong></td>
+                        <td>${subject.branch}</td>
+                        <td>${subject.semester}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="3">No subjects</td></tr>';
+                
+                console.log('✅ Subjects loaded:', subjects.length);
+            } catch (err) {
+                console.error('Subjects error:', err);
+                document.getElementById('subjectsBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;">Failed to load subjects</td></tr>';
+            }
+        }
+
+        // 🔥 LOAD ATTENDANCE (Mock data for now)
+        async function loadStudentAttendance() {
+            try {
+                const tbody = document.getElementById('attendanceBody');
+                const summaryEl = document.getElementById('attendanceSummary');
+                
+                // Mock attendance data - replace with real API later
+                const mockAttendance = [
+                    { date: '2026-02-05', class: 'DSA', status: 'Present' },
+                    { date: '2026-02-04', class: 'OS', status: 'Present' },
+                    { date: '2026-02-03', class: 'DBMS', status: 'Absent' },
+                    { date: '2026-02-02', class: 'DSA', status: 'Present' },
+                    { date: '2026-02-01', class: 'OS', status: 'Present' }
+                ];
+                
+                const presentCount = mockAttendance.filter(a => a.status === 'Present').length;
+                const totalCount = mockAttendance.length;
+                const attendancePercent = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+                
+                summaryEl.textContent = `${attendancePercent}% (${presentCount}/${totalCount})`;
+                summaryEl.style.color = attendancePercent >= 75 ? '#10b981' : '#ef4444';
+                
+                tbody.innerHTML = mockAttendance.slice(-10).reverse().map(att => `
+                    <tr>
+                        <td>${new Date(att.date).toLocaleDateString()}</td>
+                        <td>${att.class}</td>
+                        <td><span class="status-${att.status.toLowerCase()}">${att.status}</span></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="3">No attendance records</td></tr>';
+                
+                console.log('✅ Attendance loaded:', mockAttendance.length, 'records');
+            } catch (err) {
+                console.error('Attendance error:', err);
+                document.getElementById('attendanceBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;">Failed to load attendance</td></tr>';
+            }
+        }
+
+        // 🔥 LOAD MARKS (Mock data for now)
+        async function loadStudentMarks() {
+            try {
+                const tbody = document.getElementById('marksBody');
+                
+                // Mock marks data - replace with real API later
+                const mockMarks = [
+                    { subject: 'DSA', marks: 92 },
+                    { subject: 'OS', marks: 85 },
+                    { subject: 'DBMS', marks: 78 },
+                    { subject: 'Networks', marks: 88 }
+                ];
+                
+                tbody.innerHTML = mockMarks.map(marks => {
+                    const grade = getGrade(marks.marks);
+                    return `
+                        <tr>
+                            <td><strong>${marks.subject}</strong></td>
+                            <td>${marks.marks}/100</td>
+                            <td><span class="grade-badge ${grade.class}">${grade.grade}</span></td>
+                        </tr>
+                    `;
+                }).join('') || '<tr><td colspan="3">No marks available</td></tr>';
+                
+                console.log('✅ Marks loaded:', mockMarks.length);
+            } catch (err) {
+                console.error('Marks error:', err);
+                document.getElementById('marksBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;">Failed to load marks</td></tr>';
+            }
+        }
+
+        // 🔥 MAIN INITIALIZATION
+        async function initStudentDashboard() {
+            console.log('🚀 Initializing Student Dashboard...');
+            
+            await loadStudentProfile();
+            await loadStudentSubjects();
+            await loadStudentAttendance();
+            await loadStudentMarks();
+            
+            // 🔥 EVENT LISTENERS
+            document.getElementById('refreshAllBtn').addEventListener('click', async () => {
+                showMessage('🔄 Refreshing all data...', 'info');
+                await loadStudentProfile();
+                await loadStudentSubjects();
+                await loadStudentAttendance();
+                await loadStudentMarks();
+                showMessage('✅ All data refreshed!', 'success');
+            });
+            
+            document.getElementById('loadAttendanceBtn').addEventListener('click', loadStudentAttendance);
+            document.getElementById('loadMarksBtn').addEventListener('click', loadStudentMarks);
+            
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                try {
+                    await fetch(`${API_BASE}/logout`, { credentials: 'include' });
+                } catch (err) {
+                    console.log('Logout error:', err);
+                }
+                window.location.href = '/index.html';
+            });
+            
+            console.log('✅ Student Dashboard fully loaded!');
+        }
+
+        // 🔥 START ON PAGE LOAD
+        document.addEventListener('DOMContentLoaded', initStudentDashboard);
+    </script>
 </body>
 </html>
