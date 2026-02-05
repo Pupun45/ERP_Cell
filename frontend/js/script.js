@@ -43,7 +43,7 @@ async function loadBranches() {
     const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
     
     if (!res.ok) {
-      console.warn('Subjects API failed:', res.status);
+      if (res.status !== 403) console.warn('Subjects API failed:', res.status);
       return [];
     }
     
@@ -1064,7 +1064,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 🔥 AUTO-LOAD EVERYTHING
-  await loadBranches(); // Branches first
+ if (detectDashboardType() !== 'teacher') {
+  await loadBranches(); // Admin/Student only
+} // Branches first
   
   // DASHBOARD AUTH + INIT
   const dashboardType = detectDashboardType();
@@ -1136,7 +1138,7 @@ document.getElementById('subjectBranch')?.addEventListener('input', (e) => {
 async function initTeacherDashboard() {
   console.log('🔥 Initializing Teacher Dashboard');
   await loadTeacherProfile();
-  await loadTeacherBranches();  // 🔥 Load branches for class form
+  await loadTeacherBranches();
   await loadTeacherClasses();
   
   // 🔥 EVENT LISTENERS for cascade
