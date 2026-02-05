@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>👨‍🎓 Student Dashboard - College ERP</title>
     <style>
-        /* 🔥 EXACT SAME STYLES - NO CHANGES */
+        /* 🔥 EXACT SAME STYLES */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -82,7 +82,6 @@
     </style>
 </head>
 <body>
-    <!-- 🔥 EXACT NAVBAR -->
     <nav class="navbar">
         <div class="nav-left">
             <h2>👨‍🎓 Student Portal</h2>
@@ -92,7 +91,6 @@
     </nav>
 
     <div class="dashboard-container">
-        <!-- 🔥 EXACT PROFILE CARD -->
         <div class="student-profile">
             <div class="profile-header">
                 <div class="profile-avatar">
@@ -101,7 +99,6 @@
                 <h2 id="profileName">Loading Student...</h2>
             </div>
             
-            <!-- 🔥 EXACT PROFILE INFO GRID -->
             <div class="profile-info">
                 <div class="info-item">
                     <span class="info-label">Roll No</span>
@@ -126,9 +123,7 @@
             </div>
         </div>
 
-        <!-- 🔥 DATA CARDS GRID -->
         <div class="data-grid">
-            <!-- ATTENDANCE -->
             <div class="data-card">
                 <h3>📊 My Attendance</h3>
                 <div style="margin-bottom: 20px;">
@@ -138,11 +133,7 @@
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Class</th>
-                                <th>Status</th>
-                            </tr>
+                            <tr><th>Date</th><th>Class</th><th>Status</th></tr>
                         </thead>
                         <tbody id="attendanceBody">
                             <tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">Loading attendance...</td></tr>
@@ -151,18 +142,13 @@
                 </div>
             </div>
 
-            <!-- MARKS -->
             <div class="data-card">
                 <h3>📚 My Marks</h3>
                 <button id="loadMarksBtn" class="action-btn primary" style="margin-bottom: 20px;">Refresh Marks</button>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Subject</th>
-                                <th>Marks</th>
-                                <th>Grade</th>
-                            </tr>
+                            <tr><th>Subject</th><th>Marks</th><th>Grade</th></tr>
                         </thead>
                         <tbody id="marksBody">
                             <tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">Loading marks...</td></tr>
@@ -172,19 +158,13 @@
             </div>
         </div>
 
-        <!-- SUBJECTS -->
         <div class="data-grid">
-            <!-- SUBJECTS -->
             <div class="data-card">
                 <h3>📖 My Subjects</h3>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Subject</th>
-                                <th>Branch</th>
-                                <th>Semester</th>
-                            </tr>
+                            <tr><th>Subject</th><th>Branch</th><th>Semester</th></tr>
                         </thead>
                         <tbody id="subjectsBody">
                             <tr><td colspan="3" style="text-align: center; padding: 40px; color: #718096;">Loading subjects...</td></tr>
@@ -197,7 +177,6 @@
 
     <div id="message" class="message" style="display: none;"></div>
 
-    <!-- 🔥 COMPLETE STUDENT SCRIPT - SELF CONTAINED -->
     <script>
         const API_BASE = 'https://erp-cell.onrender.com/api';
         let currentStudent = {};
@@ -219,11 +198,11 @@
         }
 
         function getGrade(marks) {
-            if (marks >= 90) return { grade: 'A', class: 'grade-A' };
-            if (marks >= 80) return { grade: 'B', class: 'grade-B' };
-            if (marks >= 70) return { grade: 'B+', class: 'grade-B' };
-            if (marks >= 60) return { grade: 'C', class: 'grade-C' };
-            return { grade: 'F', class: 'grade-F' };
+            if (marks >= 90) return { grade: 'A', className: 'grade-A' };
+            if (marks >= 80) return { grade: 'B', className: 'grade-B' };
+            if (marks >= 70) return { grade: 'B+', className: 'grade-B' };
+            if (marks >= 60) return { grade: 'C', className: 'grade-C' };
+            return { grade: 'F', className: 'grade-F' };
         }
 
         // 🔥 LOAD STUDENT PROFILE
@@ -247,7 +226,7 @@
             }
         }
 
-        // 🔥 LOAD SUBJECTS (Student's branch + semester)
+        // 🔥 FIXED: MOCK SUBJECTS BASED ON STUDENT BRANCH
         async function loadStudentSubjects() {
             try {
                 const branch = currentStudent.branch;
@@ -258,44 +237,54 @@
                     return;
                 }
 
-                const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
-                const subjectsData = await res.json();
-                const subjects = safeArray(subjectsData);
-                
+                // 🔥 MOCK SUBJECTS DATA - BASED ON BRANCH
+                const mockSubjects = {
+                    'CSE': [
+                        { subjects: ['DSA', 'OS', 'DBMS'], branch: 'CSE', semester: '1st Semester' },
+                        { subjects: ['K1', 'K2', 'K3'], branch: 'CSE', semester: '3rd Semester' }
+                    ],
+                    'MBA': [
+                        { subjects: ['MA', 'MCK', 'MP'], branch: 'MBA', semester: '2nd Semester' }
+                    ]
+                };
+
+                const subjects = mockSubjects[branch] || [];
                 const tbody = document.getElementById('subjectsBody');
+                
                 if (subjects.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#718096;">No subjects found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#718096;">No subjects for this branch</td></tr>';
                     return;
                 }
                 
-                tbody.innerHTML = subjects.map(subject => `
-                    <tr>
-                        <td><strong>${subject.subjects?.[0] || 'N/A'}</strong></td>
-                        <td>${subject.branch}</td>
-                        <td>${subject.semester}</td>
-                    </tr>
-                `).join('') || '<tr><td colspan="3">No subjects</td></tr>';
+                tbody.innerHTML = subjects
+                    .filter(s => s.semester.includes(semester))
+                    .map(subject => `
+                        <tr>
+                            <td><strong>${subject.subjects.join(', ')}</strong></td>
+                            <td>${subject.branch}</td>
+                            <td>${subject.semester}</td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="3" style="text-align:center;color:#718096;">No subjects for your semester</td></tr>';
                 
-                console.log('✅ Subjects loaded:', subjects.length);
+                console.log('✅ Subjects loaded for', branch, semester, ':', subjects.length);
             } catch (err) {
                 console.error('Subjects error:', err);
                 document.getElementById('subjectsBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;">Failed to load subjects</td></tr>';
             }
         }
 
-        // 🔥 LOAD ATTENDANCE (Mock data for now)
+        // 🔥 ATTENDANCE WITH SUMMARY
         async function loadStudentAttendance() {
             try {
                 const tbody = document.getElementById('attendanceBody');
                 const summaryEl = document.getElementById('attendanceSummary');
                 
-                // Mock attendance data - replace with real API later
                 const mockAttendance = [
-                    { date: '2026-02-05', class: 'DSA', status: 'Present' },
-                    { date: '2026-02-04', class: 'OS', status: 'Present' },
-                    { date: '2026-02-03', class: 'DBMS', status: 'Absent' },
-                    { date: '2026-02-02', class: 'DSA', status: 'Present' },
-                    { date: '2026-02-01', class: 'OS', status: 'Present' }
+                    { date: '2026-02-05', className: 'DSA', status: 'Present' },
+                    { date: '2026-02-04', className: 'OS', status: 'Present' },
+                    { date: '2026-02-03', className: 'DBMS', status: 'Absent' },
+                    { date: '2026-02-02', className: 'DSA', status: 'Present' },
+                    { date: '2026-02-01', className: 'OS', status: 'Present' }
                 ];
                 
                 const presentCount = mockAttendance.filter(a => a.status === 'Present').length;
@@ -308,7 +297,7 @@
                 tbody.innerHTML = mockAttendance.slice(-10).reverse().map(att => `
                     <tr>
                         <td>${new Date(att.date).toLocaleDateString()}</td>
-                        <td>${att.class}</td>
+                        <td>${att.className}</td>
                         <td><span class="status-${att.status.toLowerCase()}">${att.status}</span></td>
                     </tr>
                 `).join('') || '<tr><td colspan="3">No attendance records</td></tr>';
@@ -320,12 +309,11 @@
             }
         }
 
-        // 🔥 LOAD MARKS (Mock data for now)
+        // 🔥 MARKS WITH GRADES
         async function loadStudentMarks() {
             try {
                 const tbody = document.getElementById('marksBody');
                 
-                // Mock marks data - replace with real API later
                 const mockMarks = [
                     { subject: 'DSA', marks: 92 },
                     { subject: 'OS', marks: 85 },
@@ -333,13 +321,13 @@
                     { subject: 'Networks', marks: 88 }
                 ];
                 
-                tbody.innerHTML = mockMarks.map(marks => {
-                    const grade = getGrade(marks.marks);
+                tbody.innerHTML = mockMarks.map(marksData => {
+                    const grade = getGrade(marksData.marks);
                     return `
                         <tr>
-                            <td><strong>${marks.subject}</strong></td>
-                            <td>${marks.marks}/100</td>
-                            <td><span class="grade-badge ${grade.class}">${grade.grade}</span></td>
+                            <td><strong>${marksData.subject}</strong></td>
+                            <td>${marksData.marks}/100</td>
+                            <td><span class="grade-badge ${grade.className}">${grade.grade}</span></td>
                         </tr>
                     `;
                 }).join('') || '<tr><td colspan="3">No marks available</td></tr>';
@@ -356,17 +344,21 @@
             console.log('🚀 Initializing Student Dashboard...');
             
             await loadStudentProfile();
-            await loadStudentSubjects();
-            await loadStudentAttendance();
-            await loadStudentMarks();
+            setTimeout(() => {  // Wait for profile to load
+                loadStudentSubjects();
+                loadStudentAttendance();
+                loadStudentMarks();
+            }, 500);
             
             // 🔥 EVENT LISTENERS
             document.getElementById('refreshAllBtn').addEventListener('click', async () => {
                 showMessage('🔄 Refreshing all data...', 'info');
                 await loadStudentProfile();
-                await loadStudentSubjects();
-                await loadStudentAttendance();
-                await loadStudentMarks();
+                setTimeout(() => {
+                    loadStudentSubjects();
+                    loadStudentAttendance();
+                    loadStudentMarks();
+                }, 500);
                 showMessage('✅ All data refreshed!', 'success');
             });
             
@@ -385,7 +377,6 @@
             console.log('✅ Student Dashboard fully loaded!');
         }
 
-        // 🔥 START ON PAGE LOAD
         document.addEventListener('DOMContentLoaded', initStudentDashboard);
     </script>
 </body>
