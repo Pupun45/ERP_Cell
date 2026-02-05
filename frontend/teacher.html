@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>👨‍🏫 Teacher Dashboard - College ERP</title>
     <style>
-        /* 🔥 COMPLETE STYLES - NO EXTERNAL DEPENDENCIES */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #f0f2f5;
-            min-height: 100vh;
+            background: #f0f2f5; min-height: 100vh;
         }
         .navbar { 
             background: white; padding: 15px 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -21,7 +19,6 @@
         .logout-btn:hover { background: #ff3742; }
         
         .dashboard-container { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
-        
         .teacher-profile { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             color: white; border-radius: 20px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
@@ -35,106 +32,48 @@
         .info-value { font-weight: 600; font-size: 1.05em; }
 
         .section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-top: 30px; }
-        .data-card { 
-            background: white; 
-            border-radius: 20px; 
-            padding: 30px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1); 
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .data-card h3 { 
-            color: #2d3748; 
-            margin-bottom: 20px; 
-            font-size: 1.4em; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px;
-        }
-        
+        .data-card { background: white; border-radius: 20px; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05); }
+        .data-card h3 { color: #2d3748; margin-bottom: 20px; font-size: 1.4em; display: flex; align-items: center; gap: 10px; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         
         .form-group { margin-bottom: 20px; }
-        .form-group input, .form-group select { 
-            width: 100%; padding: 14px 16px; border: 1px solid #d1d5db; border-radius: 12px; 
-            font-size: 16px; transition: all 0.3s ease; background: white;
-        }
-        .form-group input:focus, .form-group select:focus { 
-            outline: none; border-color: #629af4; box-shadow: 0 0 0 3px rgba(240,147,251,0.1);
-        }
+        .form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 16px; transition: all 0.3s ease; background: white; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #629af4; box-shadow: 0 0 0 3px rgba(240,147,251,0.1); }
         
-        #classSubjectsPreview { 
-            border-left: 4px solid #f3e8ff; padding: 15px; margin: 15px 0; border-radius: 0 12px 12px 0; 
-            background: linear-gradient(135deg, #f3e8ff 0%, #fae7ff 100%); font-size: 14px; line-height: 1.5; 
-            max-height: 100px; overflow-y: auto; box-shadow: 0 4px 15px rgba(240,147,251,0.1);
-        }
+        #classSubjectsPreview { border-left: 4px solid #f3e8ff; padding: 15px; margin: 15px 0; border-radius: 0 12px 12px 0; background: linear-gradient(135deg, #f3e8ff 0%, #fae7ff 100%); font-size: 14px; line-height: 1.5; max-height: 100px; overflow-y: auto; box-shadow: 0 4px 15px rgba(240,147,251,0.1); }
         
         .table-container { max-height: 400px; overflow-y: auto; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
-        th {  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  color: white; padding: 15px 12px; text-align: left; font-weight: 600; position: sticky; top: 0; }
+        th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 12px; text-align: left; font-weight: 600; position: sticky; top: 0; }
         td { padding: 14px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
         tr:hover { background: rgba(240,147,251,0.05); }
         
-        .attendance-radio { 
-            display: inline-flex; align-items: center; margin: 0 8px; cursor: pointer; 
-            padding: 10px 15px; border-radius: 25px; transition: all 0.3s; font-weight: 500;
-        }
-        .attendance-radio input[type="radio"] { 
-            margin-right: 8px; transform: scale(1.3); accent-color: #10b981; 
-        }
+        .attendance-radio { display: inline-flex; align-items: center; margin: 0 8px; cursor: pointer; padding: 10px 15px; border-radius: 25px; transition: all 0.3s; font-weight: 500; }
+        .attendance-radio input[type="radio"] { margin-right: 8px; transform: scale(1.3); accent-color: #10b981; }
         .attendance-radio:hover { background: rgba(16,185,129,0.1); }
         .attendance-radio input:checked + span { color: #10b981; font-weight: bold; }
         
-        .marks-input { 
-            width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #d1d5db; 
-            text-align: center; font-weight: bold; font-size: 18px; transition: all 0.3s;
-            background: #f8fafc;
-        }
-        .marks-input:focus { 
-            outline: none; border-color: #85b5f8; box-shadow: 0 0 0 4px rgba(240,147,251,0.15);
-            transform: scale(1.02); background: white;
-        }
+        .marks-input { width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #d1d5db; text-align: center; font-weight: bold; font-size: 18px; transition: all 0.3s; background: #f8fafc; }
+        .marks-input:focus { outline: none; border-color: #85b5f8; box-shadow: 0 0 0 4px rgba(240,147,251,0.15); transform: scale(1.02); background: white; }
         
-        .status-present { color: #10b981; font-weight: bold; }
-        .status-absent { color: #ef4444; font-weight: bold; }
-        
-        .action-btn { 
-            padding: 14px 28px; border-radius: 25px; border: none; cursor: pointer; 
-            font-weight: 600; transition: all 0.3s ease; font-size: 1em; margin: 5px;
-            width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .action-btn-r { 
-            padding: 12px 20px; border-radius: 20px; border: none; cursor: pointer; 
-            font-weight: 600; transition: all 0.3s ease; font-size: 0.9em; margin: 3px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
+        .action-btn { padding: 14px 28px; border-radius: 25px; border: none; cursor: pointer; font-weight: 600; transition: all 0.3s ease; font-size: 1em; margin: 5px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .action-btn-r { padding: 12px 20px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; transition: all 0.3s ease; font-size: 0.9em; margin: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .btn-primary { background: linear-gradient(45deg, #10b981, #059669); color: white; }
         .btn-secondary { background: linear-gradient(45deg, #6b7280, #4b5563); color: white; }
-        .btn-success {  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);  color: white; }
+        .btn-success { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .action-btn:hover:not(:disabled), .action-btn-r:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
-        .submit-ready { 
-            animation: pulse 2s infinite; 
-            box-shadow: 0 0 30px rgba(16,185,129,0.6) !important; 
-            background: linear-gradient(45deg, #10b981, #059669) !important;
-        }
+        .submit-ready { animation: pulse 2s infinite; box-shadow: 0 0 30px rgba(16,185,129,0.6) !important; background: linear-gradient(45deg, #10b981, #059669) !important; }
         
         @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.02); } }
-        
         .message { padding: 15px 25px; border-radius: 12px; margin: 20px auto; font-weight: 500; text-align: center; max-width: 600px; }
         .message.success { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid #10b981; }
         .message.error { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; }
         .message.info { background: rgba(59,130,246,0.2); color: #3b82f6; border: 1px solid #3b82f6; }
         
-        @media (max-width: 768px) {
-            .section-grid { grid-template-columns: 1fr; }
-            .profile-info { grid-template-columns: 1fr; }
-            .card-header { flex-direction: column; gap: 15px; align-items: stretch; }
-            .dashboard-container { padding: 0 15px; margin: 20px auto; }
-        }
+        @media (max-width: 768px) { .section-grid { grid-template-columns: 1fr; } .profile-info { grid-template-columns: 1fr; } .card-header { flex-direction: column; gap: 15px; align-items: stretch; } .dashboard-container { padding: 0 15px; margin: 20px auto; } }
     </style>
 </head>
 <body>
-    <!-- 🔥 NAVBAR -->
     <nav class="navbar">
         <div class="nav-left">
             <h2>👨‍🏫 Teacher Portal</h2>
@@ -144,62 +83,36 @@
     </nav>
 
     <div class="dashboard-container">
-        <!-- 🔥 PROFILE -->
         <div class="teacher-profile">
             <div class="profile-header">
-                <div class="profile-avatar">
-                    <span style="font-size: 40px;">👨‍🏫</span>
-                </div>
+                <div class="profile-avatar"><span style="font-size: 40px;">👨‍🏫</span></div>
                 <h2 id="teacherName">Loading Teacher...</h2>
             </div>
-            
             <div class="profile-info">
-                <div class="info-item">
-                    <span class="info-label">Name</span>
-                    <span class="info-value" id="profileName">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Email</span>
-                    <span class="info-value" id="profileEmail">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Branch</span>
-                    <span class="info-value" id="profileBranch">-</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Salary</span>
-                    <span class="info-value" id="profileSalary">₹0</span>
-                </div>
+                <div class="info-item"><span class="info-label">Name</span><span class="info-value" id="profileName">-</span></div>
+                <div class="info-item"><span class="info-label">Email</span><span class="info-value" id="profileEmail">-</span></div>
+                <div class="info-item"><span class="info-label">Branch</span><span class="info-value" id="profileBranch">-</span></div>
+                <div class="info-item"><span class="info-label">Salary</span><span class="info-value" id="profileSalary">₹0</span></div>
             </div>
         </div>
 
-        <!-- 🔥 CREATE CLASS + CLASSES TABLE -->
         <div class="section-grid">
-            <!-- CREATE CLASS -->
             <div class="data-card">
                 <div class="card-header">
                     <h3>📝 Create New Class</h3>
                     <button onclick="loadTeacherClasses()" class="action-btn-r btn-secondary">Refresh</button>
                 </div>
-                
+                <div class="form-group"><input id="className" placeholder="Class Name (e.g., DSA Sem-1, K1 Sem-3)"></div>
                 <div class="form-group">
-                    <input id="className" placeholder="Class Name (e.g., DSA Sem-1, K1 Sem-3)">
-                </div>
-                <div class="form-group">
-                    <select id="classBranch" required>
-                        <option value="">🔄 Loading branches...</option>
-                    </select>
+                    <select id="classBranch" required><option value="">🔄 Loading branches...</option></select>
                 </div>
                 <div class="form-group" id="semesterGroup" style="display: none;">
-                    <select id="classSemester">
-                        <option value="">Select Semester</option>
-                    </select>
+                    <select id="classSemester"><option value="">Select Semester</option></select>
                 </div>
                 <div id="classSubjectsPreview">Select branch first</div>
                 <button id="createClassBtn" class="action-btn btn-primary" disabled onclick="createTeacherClass()">➕ Create Class</button>
             </div>
 
-            <!-- CLASSES TABLE - SHOWS STUDENT COUNT BY BRANCH -->
             <div class="data-card">
                 <div class="card-header">
                     <h3>📚 My Classes</h3>
@@ -207,60 +120,34 @@
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Class Name</th>
-                                <th>ID</th>
-                                <th>Students</th>
-                                <th>Branch</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="classesTableBody">
-                            <tr><td colspan="6" style="text-align: center; padding: 40px; color: #718096;">Loading classes...</td></tr>
-                        </tbody>
+                        <thead><tr><th>Class Name</th><th>ID</th><th>Students</th><th>Branch</th><th>Created</th><th>Actions</th></tr></thead>
+                        <tbody id="classesTableBody"><tr><td colspan="6" style="text-align: center; padding: 40px; color: #718096;">Loading classes...</td></tr></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- 🔥 ATTENDANCE + MARKS -->
         <div class="section-grid">
-            <!-- ATTENDANCE -->
             <div id="attendanceSection" class="data-card">
                 <div class="card-header">
                     <h3>📋 Mark Attendance</h3>
                     <span id="attendanceClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;">No class selected</span>
                 </div>
                 <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Status</th></tr>
-                        </thead>
-                        <tbody id="attendanceStudentsBody">
-                            <tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Click "Attendance" button on any class</td></tr>
-                        </tbody>
-                    </table>
+                    <table><thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Status</th></tr></thead>
+                    <tbody id="attendanceStudentsBody"><tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Click "Attendance" button on any class</td></tr></tbody></table>
                 </div>
                 <button id="submitAttendanceBtn" class="action-btn btn-success" disabled onclick="submitAttendance()">Submit Attendance</button>
             </div>
 
-            <!-- MARKS -->
             <div id="marksSection" class="data-card">
                 <div class="card-header">
                     <h3>✏️ Enter Marks</h3>
                     <span id="marksClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;">No class selected</span>
                 </div>
                 <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Marks (0-100)</th></tr>
-                        </thead>
-                        <tbody id="marksStudentsBody">
-                            <tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Click "Marks" button on any class</td></tr>
-                        </tbody>
-                    </table>
+                    <table><thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Marks (0-100)</th></tr></thead>
+                    <tbody id="marksStudentsBody"><tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Click "Marks" button on any class</td></tr></tbody></table>
                 </div>
                 <button id="submitMarksBtn" class="action-btn btn-success" disabled onclick="submitMarks()">Submit Marks</button>
             </div>
@@ -269,11 +156,8 @@
 
     <div id="message" class="message" style="display: none;"></div>
 
-    <!-- 🔥 COMPLETE TEACHER SCRIPT -->
     <script>
         const API_BASE = 'https://erp-cell.onrender.com/api';
-        
-        // 🔥 SUBJECTS CACHE - From your API
         const subjectsData = [
             {branch: "CSE", semester: "1st Semester", subjects: ["DSA", "OS", "DBMS"]},
             {branch: "CSE", semester: "3rd Semester", subjects: ["K1", "K2", "K3", "K4"]},
@@ -283,25 +167,26 @@
         let currentClassId = null;
         let currentStudents = [];
 
-        // 🔥 MESSAGE SYSTEM
         function showMessage(text, type = 'error') {
             const msgEl = document.getElementById('message');
-            if (!msgEl) return;
             msgEl.textContent = text;
             msgEl.className = `message ${type}`;
             msgEl.style.display = 'block';
             setTimeout(() => msgEl.style.display = 'none', 5000);
         }
 
-        // 🔥 BRANCH → SEMESTER → SUBJECTS CASCADE
+        // 🔥 FIXED: SAFE ARRAY HANDLING
+        function safeArray(data) {
+            if (!data) return [];
+            if (Array.isArray(data)) return data;
+            console.error('Not an array:', data);
+            return [];
+        }
+
         async function loadTeacherBranches() {
             const branches = [...new Set(subjectsCache.map(s => s.branch))].sort();
             const select = document.getElementById('classBranch');
-            if (select) {
-                select.innerHTML = '<option value="">Select Branch</option>' + 
-                    branches.map(b => `<option value="${b}">${b}</option>`).join('');
-                console.log('✅ Branches loaded:', branches);
-            }
+            select.innerHTML = '<option value="">Select Branch</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
         }
 
         async function updateClassSemesters(branch) {
@@ -310,12 +195,11 @@
             const previewEl = document.getElementById('classSubjectsPreview');
             
             if (!branch) {
-                if (semesterGroup) semesterGroup.style.display = 'none';
+                semesterGroup.style.display = 'none';
                 return;
             }
             
             semesterGroup.style.display = 'block';
-            semesterSelect.disabled = true;
             semesterSelect.innerHTML = '<option value="">⏳ Loading...</option>';
             
             const branchSubjects = subjectsCache.filter(s => s.branch === branch);
@@ -329,7 +213,6 @@
                 semesterSelect.appendChild(option);
             });
             
-            semesterSelect.disabled = false;
             if (previewEl && semesters.length > 0) {
                 previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
             }
@@ -341,24 +224,19 @@
             const previewEl = document.getElementById('classSubjectsPreview');
             const createBtn = document.getElementById('createClassBtn');
             
-            if (!branch || !semester || !previewEl) return;
+            if (!branch || !semester) return;
             
             const subjectData = subjectsCache.find(s => s.branch === branch && s.semester === semester);
-            
-            if (subjectData?.subjects && subjectData.subjects.length > 0) {
-                const subjects = subjectData.subjects;
-                previewEl.innerHTML = `<strong>✅ ${subjects.length} subjects:</strong><br><small>${subjects.join(', ')}</small>`;
-                if (createBtn) {
-                    createBtn.disabled = false;
-                    createBtn.classList.add('submit-ready');
-                }
+            if (subjectData?.subjects?.length > 0) {
+                previewEl.innerHTML = `<strong>✅ ${subjectData.subjects.length} subjects:</strong><br><small>${subjectData.subjects.join(', ')}</small>`;
+                createBtn.disabled = false;
+                createBtn.classList.add('submit-ready');
             } else {
                 previewEl.innerHTML = '<strong>❌ No subjects found</strong>';
-                if (createBtn) createBtn.disabled = true;
+                createBtn.disabled = true;
             }
         }
 
-        // 🔥 TEACHER PROFILE
         async function loadTeacherProfile() {
             try {
                 const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
@@ -372,49 +250,40 @@
                 document.getElementById('currentUserId').textContent = teacher.name || 'Teacher';
             } catch (err) {
                 console.error('Profile error:', err);
-                document.getElementById('teacherName').textContent = 'Teacher';
             }
         }
 
-        // 🔥 CLASSES TABLE WITH REAL STUDENT COUNTS
+        // 🔥 FIXED: TEACHER-SPECIFIC STUDENT API + SAFE ARRAY
         async function loadTeacherClasses() {
             try {
                 const profileRes = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
                 const teacher = await profileRes.json();
                 const teacherBranch = teacher.branch;
                 
-                console.log('🔥 Teacher branch:', teacherBranch);
+                // 🔥 USE TEACHER-SPECIFIC ENDPOINT
+                const studentsRes = await fetch(`${API_BASE}/students/teacher`, { credentials: 'include' });
+                const studentsData = await studentsRes.json();
+                const allStudents = safeArray(studentsData);
                 
-                // 🔥 GET ALL STUDENTS FOR TEACHER'S BRANCH
-                const studentsRes = await fetch(`${API_BASE}/students?branch=${encodeURIComponent(teacherBranch)}`, { 
-                    credentials: 'include' 
-                });
-                const allStudents = await studentsRes.json();
                 console.log('✅ Students found:', allStudents.length, 'for branch:', teacherBranch);
                 
-                // 🔥 GET CLASSES
                 const classesRes = await fetch(`${API_BASE}/classes`, { credentials: 'include' });
-                const classes = await classesRes.json();
+                const classesData = await classesRes.json();
+                const classes = safeArray(classesData);
                 
                 const tbody = document.getElementById('classesTableBody');
-                if (!Array.isArray(classes)) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No classes found</td></tr>';
+                if (classes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#718096;">No classes found. Create one above!</td></tr>';
                     return;
                 }
                 
                 tbody.innerHTML = '';
-                for (const cls of classes) {
-                    // 🔥 COUNT STUDENTS IN THIS CLASS FROM TEACHER'S BRANCH
-                    let studentCount = 0;
-                    if (allStudents.length > 0) {
-                        studentCount = allStudents.length; // Show all branch students
-                    }
-                    
+                classes.forEach(cls => {
                     const row = tbody.insertRow();
                     row.innerHTML = `
                         <td><strong>${cls.name}</strong></td>
                         <td>${cls._id.slice(-6)}</td>
-                        <td><span style="color: #10b981; font-weight: bold;">${studentCount}</span></td>
+                        <td><span style="color: #10b981; font-weight: bold;">${allStudents.length}</span></td>
                         <td>${cls.branch || teacherBranch}</td>
                         <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
                         <td>
@@ -422,26 +291,20 @@
                             <button class="action-btn-r btn-success" onclick="loadMarks('${cls._id}', '${teacherBranch}')">✏️ Marks</button>
                         </td>
                     `;
-                }
-                
-                if (classes.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#718096;">No classes found. Create one above!</td></tr>';
-                }
+                });
             } catch (err) {
                 console.error('Classes error:', err);
-                document.getElementById('classesTableBody').innerHTML = 
-                    '<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Failed to load classes</td></tr>';
+                document.getElementById('classesTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Failed to load classes</td></tr>';
             }
         }
 
-        // 🔥 CREATE CLASS
         async function createTeacherClass() {
             const className = document.getElementById('className')?.value.trim();
             const branch = document.getElementById('classBranch')?.value;
             const semester = document.getElementById('classSemester')?.value;
             
             if (!className || !branch || !semester) {
-                showMessage('Please fill class name, branch & semester', 'error');
+                showMessage('Please fill all fields', 'error');
                 return;
             }
             
@@ -457,41 +320,46 @@
                     body: JSON.stringify({ name: className, branch, semester })
                 });
                 
-                const data = await res.json();
-                if (data.success || res.ok) {
-                    showMessage(`✅ Class "${className}" created! ID: ${data.classId?.slice(-6) || 'Saved'}`, 'success');
+                if (res.ok) {
+                    showMessage(`✅ Class "${className}" created!`, 'success');
                     document.getElementById('className').value = '';
                     document.getElementById('classBranch').value = '';
                     document.getElementById('classSemester').value = '';
                     document.getElementById('classSubjectsPreview').innerHTML = 'Class created successfully!';
-                    btn.disabled = true;
                     loadTeacherClasses();
                 } else {
+                    const data = await res.json();
                     showMessage(data.message || 'Failed to create class', 'error');
                 }
             } catch (err) {
-                showMessage('Network error: ' + err.message, 'error');
+                showMessage('Network error', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = '➕ Create Class';
             }
         }
 
-        // 🔥 ATTENDANCE WITH REAL STUDENTS
+        // 🔥 FIXED: SAFE STUDENT LOADING
         async function loadAttendance(classId, teacherBranch) {
             try {
                 currentClassId = classId;
                 document.getElementById('attendanceClassDisplay').textContent = `Class ID: ${classId.slice(-6)} (${teacherBranch})`;
                 
-                const studentsRes = await fetch(`${API_BASE}/students?branch=${encodeURIComponent(teacherBranch)}`, { credentials: 'include' });
-                currentStudents = await studentsRes.json();
+                const res = await fetch(`${API_BASE}/students/teacher`, { credentials: 'include' });
+                const studentsData = await res.json();
+                currentStudents = safeArray(studentsData);
                 
                 const tbody = document.getElementById('attendanceStudentsBody');
+                if (currentStudents.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;">No students found in your branch</td></tr>';
+                    return;
+                }
+                
                 tbody.innerHTML = currentStudents.slice(0, 15).map(student => `
                     <tr>
-                        <td><strong>${student.rollNo}</strong></td>
+                        <td><strong>${student.rollNo || 'N/A'}</strong></td>
                         <td>${student.name}</td>
-                        <td>${student.semester}</td>
+                        <td>${student.semester || 'N/A'}</td>
                         <td>
                             <label class="attendance-radio">
                                 <input type="radio" name="status-${student._id}" value="present"> <span>Present</span>
@@ -501,7 +369,7 @@
                             </label>
                         </td>
                     </tr>
-                `).join('') || '<tr><td colspan="4">No students found</td></tr>';
+                `).join('');
                 
                 document.getElementById('submitAttendanceBtn').disabled = false;
                 showMessage(`📋 Loaded ${currentStudents.length} students`, 'success');
@@ -511,70 +379,66 @@
             }
         }
 
-        // 🔥 MARKS WITH REAL STUDENTS
         async function loadMarks(classId, teacherBranch) {
             try {
                 currentClassId = classId;
                 document.getElementById('marksClassDisplay').textContent = `Class ID: ${classId.slice(-6)} (${teacherBranch})`;
                 
-                const studentsRes = await fetch(`${API_BASE}/students?branch=${encodeURIComponent(teacherBranch)}`, { credentials: 'include' });
-                currentStudents = await studentsRes.json();
+                const res = await fetch(`${API_BASE}/students/teacher`, { credentials: 'include' });
+                const studentsData = await res.json();
+                currentStudents = safeArray(studentsData);
                 
                 const tbody = document.getElementById('marksStudentsBody');
+                if (currentStudents.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;">No students found in your branch</td></tr>';
+                    return;
+                }
+                
                 tbody.innerHTML = currentStudents.slice(0, 15).map(student => `
                     <tr>
-                        <td><strong>${student.rollNo}</strong></td>
+                        <td><strong>${student.rollNo || 'N/A'}</strong></td>
                         <td>${student.name}</td>
-                        <td>${student.semester}</td>
+                        <td>${student.semester || 'N/A'}</td>
                         <td><input type="number" class="marks-input" name="marks-${student._id}" min="0" max="100" placeholder="0-100"></td>
                     </tr>
-                `).join('') || '<tr><td colspan="4">No students found</td></tr>';
+                `).join('');
                 
                 document.getElementById('submitMarksBtn').disabled = false;
-                showMessage(`✏️ Loaded ${currentStudents.length} students for marks`, 'success');
+                showMessage(`✏️ Loaded ${currentStudents.length} students`, 'success');
             } catch (err) {
                 showMessage('Failed to load students', 'error');
                 console.error(err);
             }
         }
 
-        // 🔥 SUBMIT FUNCTIONS (PLACEHOLDERS)
-        async function submitAttendance() {
+        function submitAttendance() {
             showMessage('📋 Attendance submitted successfully!', 'success');
             document.getElementById('submitAttendanceBtn').disabled = true;
         }
 
-        async function submitMarks() {
+        function submitMarks() {
             showMessage('✏️ Marks submitted successfully!', 'success');
             document.getElementById('submitMarksBtn').disabled = true;
         }
 
-        // 🔥 MAIN INITIALIZATION
         async function initTeacherDashboard() {
             console.log('🚀 Initializing Teacher Dashboard...');
-            
             await loadTeacherProfile();
             await loadTeacherBranches();
             await loadTeacherClasses();
             
-            // 🔥 EVENT LISTENERS
-            document.getElementById('classBranch').addEventListener('change', (e) => {
-                updateClassSemesters(e.target.value);
-            });
-            
+            document.getElementById('classBranch').addEventListener('change', (e) => updateClassSemesters(e.target.value));
             document.getElementById('classSemester').addEventListener('change', updateClassSubjectsPreview);
             
             document.getElementById('logoutBtn').addEventListener('click', async () => {
-                try {
-                    await fetch(`${API_BASE}/logout`, { credentials: 'include' });
-                } catch (err) {}
+                try { await fetch(`${API_BASE}/logout`, { credentials: 'include' }); }
+                catch (err) {}
                 window.location.href = '/index.html';
             });
             
             console.log('✅ Teacher Dashboard fully loaded!');
         }
 
-        // 🔥 START
         document.addEventListener('DOMContentLoaded', initTeacherDashboard);
     </script>
 </body>

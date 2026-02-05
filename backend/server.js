@@ -376,6 +376,29 @@ app.put('/api/subjects/:id', auth, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// 🔥 TEACHERS CAN VIEW THEIR BRANCH STUDENTS
+app.get('/api/students/teacher', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Teachers only' });
+    }
+
+    // Get teacher's branch from profile
+    const teacher = await Teacher.findById(req.user.id).select('branch');
+    if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+
+    // Get students from teacher's branch
+    const students = await Student.find({ 
+      branch: teacher.branch 
+    }).sort({ rollNo: 1 }).select('-password');
+
+    console.log(`✅ Teacher ${teacher.name} accessed ${students.length} students from ${teacher.branch}`);
+    res.json(students);
+  } catch (err) {
+    console.error('❌ Teacher students error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // 7. Branches list
 app.get('/api/branches', auth, async (req, res) => {
