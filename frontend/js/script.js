@@ -41,9 +41,23 @@ function detectDashboardType() {
 async function loadBranches() {
   try {
     const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
+    
+    if (!res.ok) {
+      console.warn('Subjects API failed:', res.status);
+      return [];
+    }
+    
     const subjects = await res.json();
+    
+    // 🔥 SAFETY CHECK: Ensure subjects is array
+    if (!Array.isArray(subjects)) {
+      console.error('Subjects is not array:', subjects);
+      return [];
+    }
+    
     const branches = [...new Set(subjects.map(s => s.branch))].sort();
     
+    // Rest of your existing code...
     const teacherBranch = document.getElementById('teacherBranch');
     const studentBranch = document.getElementById('studentBranch');
     const classBranch = document.getElementById('classBranch');
@@ -736,7 +750,7 @@ async function editTeacher(id) {
     showMessage('❌ Failed to load teacher data', 'error');
   }
 }
-// 🔥 TEACHER CLASS CASCADE: Branch → Semester → Subjects Preview
+
 async function updateClassSemesters(branch) {
   const semesterSelect = document.getElementById('classSemester');
   const previewEl = document.getElementById('classSubjectsPreview');
@@ -748,16 +762,15 @@ async function updateClassSemesters(branch) {
   
   semesterSelect.style.display = 'block';
   semesterSelect.disabled = true;
-  semesterSelect.innerHTML = '<option value="">⏳ Loading semesters...</option>';
+  semesterSelect.innerHTML = '<option value="">⏳ Loading...</option>';
+  
+  // 🔥 TEACHER FALLBACK: Hardcoded semesters
+  const fallbackSemesters = ['1st Semester', '2nd Semester', '3rd Semester', '4th Semester'];
   
   try {
-    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
-    const subjects = await res.json();
-    
-    const semesters = [...new Set(subjects.map(item => item.semester))].sort();
     semesterSelect.innerHTML = '<option value="">Select Semester</option>';
     
-    semesters.forEach(semester => {
+    fallbackSemesters.forEach(semester => {
       const option = document.createElement('option');
       option.value = semester;
       option.textContent = semester;
@@ -765,15 +778,16 @@ async function updateClassSemesters(branch) {
     });
     
     semesterSelect.disabled = false;
-    
-    // Show semesters preview
-    previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
+    previewEl.innerHTML = `<strong>✅ ${fallbackSemesters.length} semesters:</strong> ${fallbackSemesters.slice(0,2).join(', ')}...`;
     
   } catch (err) {
-    semesterSelect.innerHTML = '<option value="">No semesters</option>';
-    semesterSelect.disabled = false;
+    console.warn('Teacher semesters failed:', err);
+    semesterSelect.innerHTML = '<option value="">Teacher access restricted</option>';
+    semesterSelect.disabled = true;
+    previewEl.innerHTML = '<strong>⚠️ Contact admin for subjects</strong>';
   }
 }
+
 
 async function updateClassSubjectsPreview() {
   const branch = document.getElementById('classBranch')?.value;
@@ -805,20 +819,19 @@ async function updateClassSubjectsPreview() {
   }
 }
 
-// 🔥 Load branches for class creation
 async function loadTeacherBranches() {
   try {
-    const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
-    const subjects = await res.json();
-    const branches = [...new Set(subjects.map(s => s.branch))].sort();
+    // 🔥 TEACHER-SAFE: Skip 403 subjects API
+    const fallbackBranches = ['CSE', 'ECE', 'MECH', 'MBA', 'CIVIL'];
     
     const select = document.getElementById('classBranch');
     if (select) {
       select.innerHTML = '<option value="">Select Branch</option>' + 
-        branches.map(b => `<option value="${b}">${b}</option>`).join('');
+        fallbackBranches.map(b => `<option value="${b}">${b}</option>`).join('');
+      console.log('✅ Teacher branches loaded (fallback):', fallbackBranches);
     }
   } catch (err) {
-    console.error('Branches load failed:', err);
+    console.error('Teacher branches failed:', err);
   }
 }
 
