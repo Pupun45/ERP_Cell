@@ -752,22 +752,28 @@ async function editTeacher(id) {
 }
 
 async function updateClassSemesters(branch) {
+  console.log('🔥 Branch changed:', branch);  // DEBUG
+  
   const semesterSelect = document.getElementById('classSemester');
+  const semesterGroup = document.getElementById('semesterGroup');
   const previewEl = document.getElementById('classSubjectsPreview');
   
   if (!semesterSelect || !branch) {
-    if (semesterSelect) semesterSelect.style.display = 'none';
+    if (semesterGroup) semesterGroup.style.display = 'none';
     return;
   }
   
-  semesterSelect.style.display = 'block';
-  semesterSelect.innerHTML = '<option value="">⏳ Loading...</option>';
+  // Show semester dropdown
+  semesterGroup.style.display = 'block';
   semesterSelect.disabled = true;
+  semesterSelect.innerHTML = '<option value="">⏳ Loading semesters...</option>';
   
-  // Use cached data (FAST, NO API CALL)
+  // Use cached data (FAST)
   if (subjectsCache && Array.isArray(subjectsCache)) {
     const branchSubjects = subjectsCache.filter(s => s.branch === branch);
     const semesters = [...new Set(branchSubjects.map(s => s.semester))].sort();
+    
+    console.log('✅ Semesters for', branch, ':', semesters);
     
     semesterSelect.innerHTML = '<option value="">Select Semester</option>';
     semesters.forEach(semester => {
@@ -778,13 +784,25 @@ async function updateClassSemesters(branch) {
     });
     
     semesterSelect.disabled = false;
-    previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
+    previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.join(', ')}`;
     return;
   }
   
-  // Fallback
-  semesterSelect.innerHTML = '<option value="">No data available</option>';
-  semesterSelect.disabled = true;
+  // Fallback semesters
+  const fallbackSemesters = branch === 'CSE' ? 
+    ['1st Semester', '3rd Semester'] : 
+    ['2nd Semester'];
+    
+  semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+  fallbackSemesters.forEach(semester => {
+    const option = document.createElement('option');
+    option.value = semester;
+    option.textContent = semester;
+    semesterSelect.appendChild(option);
+  });
+  
+  semesterSelect.disabled = false;
+  previewEl.innerHTML = `<strong>✅ ${fallbackSemesters.length} semesters:</strong> ${fallbackSemesters.join(', ')}`;
 }
 
 
@@ -792,10 +810,13 @@ async function updateClassSubjectsPreview() {
   const branch = document.getElementById('classBranch')?.value;
   const semester = document.getElementById('classSemester')?.value;
   const previewEl = document.getElementById('classSubjectsPreview');
+  const createBtn = document.getElementById('createClassBtn');
+  
+  console.log('🔥 Semester changed:', branch, semester);  // DEBUG
   
   if (!branch || !semester || !previewEl) return;
   
-  // Use cached data ONLY (NO API CALLS)
+  // Use cached data
   if (subjectsCache && Array.isArray(subjectsCache)) {
     const subjectData = subjectsCache.find(s => s.branch === branch && s.semester === semester);
     
@@ -805,13 +826,34 @@ async function updateClassSubjectsPreview() {
         <strong>✅ ${subjects.length} subjects:</strong><br>
         <small>${subjects.join(', ')}</small>
       `;
-      document.getElementById('createClassBtn').disabled = false;
+      createBtn.disabled = false;
+      createBtn.classList.add('submit-ready');
       return;
     }
   }
   
-  previewEl.innerHTML = '<strong>❌ No subjects found</strong>';
-  document.getElementById('createClassBtn').disabled = true;
+  // Fallback subjects
+  const fallbackSubjects = {
+    'CSE': {
+      '1st Semester': ['DSA', 'OS', 'DBMS'],
+      '3rd Semester': ['K1', 'K2', 'K3', 'K4']
+    },
+    'MBA': {
+      '2nd Semester': ['MA', 'MCK', 'MP', 'MM']
+    }
+  }[branch]?.[semester] || [];
+  
+  if (fallbackSubjects.length > 0) {
+    previewEl.innerHTML = `
+      <strong>✅ ${fallbackSubjects.length} subjects:</strong><br>
+      <small>${fallbackSubjects.join(', ')}</small>
+    `;
+    createBtn.disabled = false;
+    createBtn.classList.add('submit-ready');
+  } else {
+    previewEl.innerHTML = '<strong>❌ No subjects found</strong>';
+    createBtn.disabled = true;
+  }
 }
 
 
@@ -820,26 +862,34 @@ async function updateClassSubjectsPreview() {
 let subjectsCache = null;
 async function loadTeacherBranches() {
   try {
-    // Try API first
     const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
+    
     if (res.ok) {
-      subjectsCache = await res.json();
-      console.log('✅ Subjects cached:', subjectsCache.length);
+      const subjects = await res.json();
+      if (Array.isArray(subjects)) {
+        subjectsCache = subjects;  // Cache it!
+        const branches = [...new Set(subjects.map(s => s.branch))].sort();
+        
+        const select = document.getElementById('classBranch');
+        if (select) {
+          select.innerHTML = '<option value="">Select Branch</option>' + 
+            branches.map(b => `<option value="${b}">${b}</option>`).join('');
+          console.log('✅ API branches:', branches);
+        }
+        return;
+      }
     }
     
-    // Populate branches from cache/API
-    const branches = subjectsCache ? 
-      [...new Set(subjectsCache.map(s => s.branch))].sort() : 
-      ['CSE', 'MBA'];
-    
+    // Fallback branches (CSE, MBA)
+    const fallback = ['CSE', 'MBA'];
     const select = document.getElementById('classBranch');
     if (select) {
       select.innerHTML = '<option value="">Select Branch</option>' + 
-        branches.map(b => `<option value="${b}">${b}</option>`).join('');
-      console.log('✅ Branches:', branches);
+        fallback.map(b => `<option value="${b}">${b}</option>`).join('');
+      console.log('✅ Fallback branches:', fallback);
     }
   } catch (err) {
-    console.warn('API failed, using fallback branches');
+    console.warn('Teacher API blocked (normal), using fallback');
     const fallback = ['CSE', 'MBA'];
     const select = document.getElementById('classBranch');
     if (select) {
@@ -1145,19 +1195,27 @@ document.getElementById('subjectBranch')?.addEventListener('input', (e) => {
   document.getElementById('refreshTeachersBtn')?.addEventListener('click', loadTeachersTable);
   document.getElementById('refreshStudentsBtn')?.addEventListener('click', loadStudentsTable);
 }
-
 async function initTeacherDashboard() {
   console.log('🔥 Initializing Teacher Dashboard');
   await loadTeacherProfile();
-  await loadTeacherBranches(); 
+  await loadTeacherBranches();
   await loadTeacherClasses();
   
-  // 🔥 EVENT LISTENERS for cascade
-   document.getElementById('classBranch')?.addEventListener('change', (e) => {
-    updateClassSemesters(e.target.value);
-  });
-  document.getElementById('classSemester')?.addEventListener('change', updateClassSubjectsPreview);
-  document.getElementById('createClassBtn')?.addEventListener('click', createTeacherClass);
+  // 🔥 CRITICAL: Add event listeners
+  const branchSelect = document.getElementById('classBranch');
+  const semesterSelect = document.getElementById('classSemester');
+  
+  if (branchSelect) {
+    branchSelect.addEventListener('change', (e) => {
+      updateClassSemesters(e.target.value);
+    });
+    console.log('✅ Branch change listener added');
+  }
+  
+  if (semesterSelect) {
+    semesterSelect.addEventListener('change', updateClassSubjectsPreview);
+    console.log('✅ Semester change listener added');
+  }
 }
 
 
