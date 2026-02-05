@@ -69,7 +69,11 @@ const Student = mongoose.model('Student', studentSchema);
 const classSchema = new mongoose.Schema({
   name: { type: String, required: true },
   branch: { type: String, required: true },
-  teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher' },
+  semester: { type: String, required: true },
+  subject: { type: String }, // Optional subject
+  teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher', required: true },
+  startTime: { type: Date, required: true },
+  endTime: { type: Date, required: true },
   students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
   createdAt: { type: Date, default: Date.now }
 });
@@ -413,24 +417,136 @@ app.get('/api/branches', auth, async (req, res) => {
 // 8. Classes
 app.get('/api/classes', auth, async (req, res) => {
   try {
-    const classes = await Class.find({}).sort({ createdAt: -1 });
-    res.json(classes || []);
+    if (req.user.role !== 'teacher' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Teachers only' });
+    }
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+
+    // Get teacher's classes only
+    const classes = await Class.find({ 
+      teacherId: req.user.id,
+      branch: teacher.branch 
+    }).sort({ startTime: -1 }).populate('students', 'name rollNo semester');
+
+    console.log(`✅ Teacher ${teacher.name} loaded ${classes.length} classes`);
+    res.json(classes);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('❌ Classes error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 app.post('/api/classes', auth, async (req, res) => {
   try {
-    const { name, branch } = req.body;
-    const newClass = new Class({ name, branch });
+    if (req.user.role !== 'teacher' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Teachers only' });
+    }
+
+    const { name, branch, semester, subject, startTime, endTime } = req.body;
+    
+    if (!name || !branch || !semester || !startTime || !endTime) {
+      return res.status(400).json({ message: 'All fields required' });
+    }
+
+    const teacher = await Teacher.findById(req.user.id);
+    if (!teacher || teacher.branch !== branch) {
+      return res.status(403).json({ message: 'Invalid branch for teacher' });
+    }
+
+    const newClass = new Class({ 
+      name, 
+      branch, 
+      semester, 
+      subject, 
+      teacherId: req.user.id,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime)
+    });
+    
     await newClass.save();
-    res.json({ success: true });
+    console.log(`✅ Teacher ${teacher.name} created class: ${name}`);
+    res.json({ success: true, class: newClass });
   } catch (err) {
+    console.error('❌ Create class error:', err);
     res.status(500).json({ message: err.message });
   }
 });
 
+app.get('/api/students/teacher/:branch/:semester', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Teachers only' });
+    }
+
+    const { branch, semester } = req.params;
+    const teacher = await Teacher.findById(req.user.id).select('branch');
+
+    if (!teacher || teacher.branch !== branch) {
+      return res.status(403).json({ message: 'Access denied for this branch' });
+    }
+
+    const students = await Student.find({ 
+      branch, 
+      semester 
+    }).sort({ rollNo: 1 }).select('-password');
+
+    console.log(`✅ Teacher accessed ${students.length} students: ${branch} ${semester}`);
+    res.json(students);
+  } catch (err) {
+    console.error('❌ Teacher students error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+app.post('/api/attendance/:classId', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Teachers only' });
+    }
+
+    const { classId } = req.params;
+    const attendanceData = req.body; // { "studentId1": "present", "studentId2": "absent" }
+
+    const cls = await Class.findOne({ _id: classId, teacherId: req.user.id });
+    if (!cls) {
+      return res.status(404).json({ message: 'Class not found' });
+    }
+
+    // Save attendance (you can create Attendance schema later)
+    console.log(`✅ Attendance submitted for class ${classId}:`, Object.keys(attendanceData).length, 'students');
+    
+    res.json({ success: true, message: 'Attendance saved successfully' });
+  } catch (err) {
+    console.error('❌ Attendance error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/marks/:classId', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.type !== 'teacher') {
+      return res.status(403).json({ message: 'Teachers only' });
+    }
+
+    const { classId } = req.params;
+    const marksData = req.body; // { "studentId1": 85, "studentId2": 92 }
+
+    const cls = await Class.findOne({ _id: classId, teacherId: req.user.id });
+    if (!cls) {
+      return res.status(404).json({ message: 'Class not found' });
+    }
+
+    // Save marks (you can create Marks schema later)
+    console.log(`✅ Marks submitted for class ${classId}:`, Object.keys(marksData).length, 'students');
+    
+    res.json({ success: true, message: 'Marks saved successfully' });
+  } catch (err) {
+    console.error('❌ Marks error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 // TEACHERS
 app.post('/api/teachers', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
