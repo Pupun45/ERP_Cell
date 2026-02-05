@@ -598,32 +598,74 @@ async function loadTeachersTable() {
   }
 }
 
-// 🔥 2. FIXED loadStudentsTable()
+// 🔥 FIXED loadStudentsTable() - DYNAMIC SUBJECTS FROM API
 async function loadStudentsTable() {
   try {
     const res = await fetch(`${API_BASE}/students`, { credentials: 'include' });
     const students = await res.json();
     const tbody = document.getElementById('studentsTableBody');
     
-    tbody.innerHTML = students.map(s => `
+    if (!tbody) return;
+    
+    if (students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No students</td></tr>';
+      return;
+    }
+    
+    // Process each student to get their subjects
+    const studentsWithSubjects = await Promise.all(students.map(async (student) => {
+      let subjectsDisplay = 'N/A';
+      
+      // 🔥 DYNAMIC: Fetch subjects for this student's branch + semester
+      if (student.branch && student.semester) {
+        try {
+          const backendSemester = `${student.semester} Semester`;
+          const subjectRes = await fetch(
+            `${API_BASE}/subjects?branch=${encodeURIComponent(student.branch)}&semester=${encodeURIComponent(backendSemester)}`, 
+            { credentials: 'include' }
+          );
+          const subjectsData = await subjectRes.json();
+          
+          if (subjectsData.length > 0 && subjectsData[0]?.subjects) {
+            const subjects = subjectsData[0].subjects;
+            subjectsDisplay = subjects.slice(0,2).join(', ') + (subjects.length > 2 ? '...' : '');
+          }
+        } catch (err) {
+          console.error(`Subjects fetch failed for ${student.branch} ${student.semester}:`, err);
+          subjectsDisplay = 'Loading...';
+        }
+      }
+      
+      return {
+        ...student,
+        subjectsDisplay
+      };
+    }));
+    
+    tbody.innerHTML = studentsWithSubjects.map(s => `
       <tr>
         <td>${s.name}</td>
         <td>${s.rollNo}</td>
         <td>${s.branch}</td>
         <td>${s.semester}</td>
-        <td>${s.subjects?.slice(0,2).join(', ') || 'N/A'}</td>
+        <td>${s.subjectsDisplay}</td>
         <td>
-          <button onclick="editStudent('${s._id}', '${s.name}', '${s.email}', '${s.rollNo}', '${s.branch}', '${s.semester}')" 
+          <button onclick="editStudent('${s._id}')" 
                   class="btn btn-warning btn-sm me-1">Edit</button>
           <button onclick="deleteStudent('${s._id}')" 
                   class="btn btn-danger btn-sm">Delete</button>
         </td>
       </tr>
-    `).join('') || '<tr><td colspan="6" class="text-center py-4">No students</td></tr>';
+    `).join('');
+    
   } catch (err) {
-    console.error('Students error:', err);
+    console.error('Students table error:', err);
+    document.getElementById('studentsTableBody').innerHTML = 
+      '<tr><td colspan="6" class="text-center text-danger">Failed to load students</td></tr>';
   }
 }
+
+
 
 // 🔥 3. FIXED editTeacher() - Single param version
 async function editTeacher(id, name, email, branch, salary) {
