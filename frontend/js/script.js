@@ -683,77 +683,62 @@ async function loadStudentsTable() {
 }
 
 
-
-// 🔥 3. FIXED editTeacher() - Single param version
-async function editTeacher(id, name, email, branch, salary) {
-  editingId = id;
-  editingType = 'teacher';
-  
-  document.getElementById('teacherName').value = name || '';
-  document.getElementById('teacherEmail').value = email || '';
-  document.getElementById('teacherPassword').value = '';
-  document.getElementById('teacherBranch').value = branch || '';
-  document.getElementById('teacherSalary').value = salary || '';
-  
-  const btn = document.querySelector('#createTeacherForm button[type="submit"]');
-  if (btn) btn.textContent = 'Update Teacher';
-  
-  document.querySelector('.card:has(#createTeacherForm)')?.scrollIntoView({ behavior: 'smooth' });
-  showMessage('✏️ Edit teacher details and click Update!', 'info');
-}
-
-// 🔥 4. FIXED editStudent()
-async function editStudent(id, name, email, rollNo, branch, semester) {
+// 🔥 3. FIXED editStudent() - Single ID + API fetch
+async function editStudent(id) {
   editingId = id;
   editingType = 'student';
   
-  document.getElementById('studentName').value = name || '';
-  document.getElementById('studentEmail').value = email || '';
-  document.getElementById('studentPassword').value = '';
-  document.getElementById('studentRollNo').value = rollNo || '';
-  document.getElementById('studentBranch').value = branch || '';
-  document.getElementById('studentSemester').value = semester || '';
-  
-  const btn = document.querySelector('#createStudentForm button[type="submit"]');
-  if (btn) btn.textContent = 'Update Student';
-  
-  document.querySelector('.card:has(#createStudentForm)')?.scrollIntoView({ behavior: 'smooth' });
-  showMessage('✏️ Edit student details and click Update!', 'info');
+  try {
+    const res = await fetch(`${API_BASE}/students/${id}`, { credentials: 'include' });
+    const student = await res.json();
+    
+    document.getElementById('studentName').value = student.name || '';
+    document.getElementById('studentEmail').value = student.email || '';
+    document.getElementById('studentPassword').value = ''; // Don't prefill password
+    document.getElementById('studentRollNo').value = student.rollNo || '';
+    document.getElementById('studentBranch').value = student.branch || '';
+    document.getElementById('studentSemester').value = student.semester || '';
+    
+    const btn = document.querySelector('#createStudentForm button[type="submit"]');
+    if (btn) btn.textContent = 'Update Student';
+    
+    document.querySelector('.card:has(#createStudentForm)')?.scrollIntoView({ behavior: 'smooth' });
+    showMessage('✏️ Edit student details and click Update!', 'info');
+  } catch (err) {
+    console.error('Edit student error:', err);
+    showMessage('❌ Failed to load student data', 'error');
+  }
 }
 
-
-
-// 🔥 SIMPLIFIED EDIT FUNCTIONS
-function editTeacher(id) {
+// 🔥 4. FIXED editTeacher() - Single ID + API fetch
+async function editTeacher(id) {
   editingId = id;
   editingType = 'teacher';
-  fetch(`${API_BASE}/teachers/${id}`, { credentials: 'include' })
-    .then(res => res.json())
-    .then(teacher => {
-      document.getElementById('teacherName').value = teacher.name;
-      document.getElementById('teacherEmail').value = teacher.email;
-      document.getElementById('teacherBranch').value = teacher.branch;
-      document.getElementById('teacherSalary').value = teacher.salary;
-      document.querySelector('#createTeacherForm button[type="submit"]').textContent = 'Update Teacher';
-      showMessage('Edit Amit and click Update!', 'info');
-    });
+  
+  try {
+    const res = await fetch(`${API_BASE}/teachers/${id}`, { credentials: 'include' });
+    const teacher = await res.json();
+    
+    document.getElementById('teacherName').value = teacher.name || '';
+    document.getElementById('teacherEmail').value = teacher.email || '';
+    document.getElementById('teacherPassword').value = ''; // Don't prefill password
+    document.getElementById('teacherBranch').value = teacher.branch || '';
+    document.getElementById('teacherSemester').value = teacher.semester || '';
+    document.getElementById('teacherSalary').value = teacher.salary || '';
+    
+    const btn = document.querySelector('#createTeacherForm button[type="submit"]');
+    if (btn) btn.textContent = 'Update Teacher';
+    
+    document.querySelector('.card:has(#createTeacherForm)')?.scrollIntoView({ behavior: 'smooth' });
+    showMessage('✏️ Edit teacher details and click Update!', 'info');
+  } catch (err) {
+    console.error('Edit teacher error:', err);
+    showMessage('❌ Failed to load teacher data', 'error');
+  }
 }
 
-function editStudent(id) {
-  editingId = id;
-  editingType = 'student';
-  fetch(`${API_BASE}/students/${id}`, { credentials: 'include' })
-    .then(res => res.json())
-    .then(student => {
-      document.getElementById('studentName').value = student.name;
-      document.getElementById('studentEmail').value = student.email;
-      document.getElementById('studentRollNo').value = student.rollNo;
-      document.getElementById('studentBranch').value = student.branch;
-      document.getElementById('studentSemester').value = student.semester;
-      document.querySelector('#createStudentForm button[type="submit"]').textContent = 'Update Student';
-      showMessage('Edit student and click Update!', 'info');
-    });
-}
+
+
 
 // 🔥 TEACHER FUNCTIONS
 async function loadTeacherProfile() {
