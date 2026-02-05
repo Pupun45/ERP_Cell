@@ -102,7 +102,7 @@
             font-weight: 600; transition: all 0.3s ease; font-size: 1em; margin: 5px;
             width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-          .action-btn-r { 
+         .action-btn-r { 
             padding: 14px 28px; border-radius: 25px; border: none; cursor: pointer; 
             font-weight: 600; transition: all 0.3s ease; font-size: 1em; margin: 5px;
             width: 20%; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -174,34 +174,32 @@
         <!-- 🔥 CREATE CLASS + CLASSES TABLE -->
         <div class="section-grid">
          <!-- CREATE CLASS - PERFECT CASCADE -->
-<div class="data-card">
-  <div class="card-header">
-      <h3>📝 Create New Class</h3>
-      <button onclick="loadTeacherClasses()" class="action-btn-r btn-secondary">Refresh</button>
-  </div>
-  
-  <div class="form-group">
-      <input id="className" placeholder="Class Name (e.g., DSA Sem-1, K1 Sem-3)">
-  </div>
-  <!-- CREATE CLASS - API DRIVEN -->
-<div class="form-group">
-    <select id="classBranch" required>
-        <option value="">🔄 Loading branches from API...</option>
-    </select>
-</div>
+    <div class="data-card">
+     <div class="card-header">
+         <h3>📝 Create New Class</h3>
+         <button onclick="loadTeacherClasses()" class="action-btn-r btn-secondary">Refresh</button>
+     </div>
+     
+     <div class="form-group">
+         <input id="className" placeholder="Class Name (e.g., DSA Sem-1, K1 Sem-3)">
+     </div>
+     <!-- CREATE CLASS - API DRIVEN -->
+    <div class="form-group">
+        <select id="classBranch" required>
+            <option value="">🔄 Loading branches...</option>
+        </select>
+    </div>
 
-<div class="form-group" id="semesterGroup" style="display: none;">
-  <select id="classSemester">
-    <option value="">Select Semester</option>
-  </select>
-</div>
+    <div class="form-group" id="semesterGroup" style="display: none;">
+     <select id="classSemester">
+        <option value="">Select Semester</option>
+     </select>
+    </div>
 
-
-<div id="classSubjectsPreview">Select branch first</div>
-  
-  <button id="createClassBtn" class="action-btn btn-primary" disabled onclick="createTeacherClass()">➕ Create Class</button>
-</div>
-
+    <div id="classSubjectsPreview">Select branch first</div>
+     
+     <button id="createClassBtn" class="action-btn btn-primary" disabled onclick="createTeacherClass()">➕ Create Class</button>
+    </div>
 
             <!-- CLASSES TABLE -->
             <div class="data-card">
@@ -273,6 +271,267 @@
 
     <div id="message" class="message" style="display: none;"></div>
 
-    <script src="./js/script.js"></script>
+    <!-- 🔥 COMPLETE TEACHER SCRIPT - SELF CONTAINED -->
+    <script>
+        const API_BASE = 'https://erp-cell.onrender.com/api';
+        
+        // 🔥 TEACHER DATA - From your exact API response
+        const subjectsData = [
+            {branch: "CSE", semester: "1st Semester", subjects: ["DSA", "OS", "DBMS"]},
+            {branch: "CSE", semester: "3rd Semester", subjects: ["K1", "K2", "K3", "K4"]},
+            {branch: "MBA", semester: "2nd Semester", subjects: ["MA", "MCK", "MP", "MM"]}
+        ];
+
+        // 🔥 GLOBAL CACHE
+        let subjectsCache = subjectsData;
+
+        // Show message
+        function showMessage(text, type = 'error') {
+            const msgEl = document.getElementById('message');
+            if (!msgEl) return;
+            
+            msgEl.textContent = text;
+            msgEl.className = `message ${type}`;
+            msgEl.style.display = 'block';
+            setTimeout(() => {
+                msgEl.style.display = 'none';
+            }, 5000);
+        }
+
+        // 🔥 PERFECT BRANCH → SEMESTER → SUBJECTS
+        async function loadTeacherBranches() {
+            console.log('🔥 Loading teacher branches...');
+            
+            const branches = [...new Set(subjectsCache.map(s => s.branch))].sort();
+            const select = document.getElementById('classBranch');
+            
+            if (select) {
+                select.innerHTML = '<option value="">Select Branch</option>' + 
+                    branches.map(b => `<option value="${b}">${b}</option>`).join('');
+                console.log('✅ Branches loaded:', branches);
+            }
+        }
+
+        async function updateClassSemesters(branch) {
+            console.log('🔥 Branch selected:', branch);
+            
+            const semesterSelect = document.getElementById('classSemester');
+            const semesterGroup = document.getElementById('semesterGroup');
+            const previewEl = document.getElementById('classSubjectsPreview');
+            
+            if (!semesterSelect || !branch) {
+                if (semesterGroup) semesterGroup.style.display = 'none';
+                return;
+            }
+            
+            // Show semester group
+            semesterGroup.style.display = 'block';
+            semesterSelect.disabled = true;
+            semesterSelect.innerHTML = '<option value="">⏳ Loading...</option>';
+            
+            // Use cached data
+            const branchSubjects = subjectsCache.filter(s => s.branch === branch);
+            const semesters = [...new Set(branchSubjects.map(s => s.semester))].sort();
+            
+            console.log('✅ Semesters for', branch, ':', semesters);
+            
+            semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+            semesters.forEach(semester => {
+                const option = document.createElement('option');
+                option.value = semester;
+                option.textContent = semester;
+                semesterSelect.appendChild(option);
+            });
+            
+            semesterSelect.disabled = false;
+            if (previewEl && semesters.length > 0) {
+                previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
+            }
+        }
+
+        async function updateClassSubjectsPreview() {
+            const branch = document.getElementById('classBranch')?.value;
+            const semester = document.getElementById('classSemester')?.value;
+            const previewEl = document.getElementById('classSubjectsPreview');
+            const createBtn = document.getElementById('createClassBtn');
+            
+            console.log('🔥 Subjects preview:', branch, semester);
+            
+            if (!branch || !semester || !previewEl) return;
+            
+            const subjectData = subjectsCache.find(s => s.branch === branch && s.semester === semester);
+            
+            if (subjectData?.subjects && subjectData.subjects.length > 0) {
+                const subjects = subjectData.subjects;
+                previewEl.innerHTML = `
+                    <strong>✅ ${subjects.length} subjects:</strong><br>
+                    <small>${subjects.join(', ')}</small>
+                `;
+                if (createBtn) {
+                    createBtn.disabled = false;
+                    createBtn.classList.add('submit-ready');
+                }
+            } else {
+                previewEl.innerHTML = '<strong>❌ No subjects found</strong>';
+                if (createBtn) createBtn.disabled = true;
+            }
+        }
+
+        // 🔥 TEACHER FUNCTIONS
+        async function loadTeacherProfile() {
+            try {
+                const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+                const teacher = await res.json();
+                
+                document.getElementById('teacherName').textContent = teacher.name || 'Teacher';
+                document.getElementById('profileName').textContent = teacher.name || 'N/A';
+                document.getElementById('profileEmail').textContent = teacher.email || 'N/A';
+                document.getElementById('profileBranch').textContent = teacher.branch || 'N/A';
+                document.getElementById('profileSalary').textContent = teacher.salary ? `₹${teacher.salary}` : '₹0';
+                document.getElementById('currentUserId').textContent = teacher.name || 'Teacher';
+            } catch (err) {
+                console.error('Profile load error:', err);
+                document.getElementById('teacherName').textContent = 'Teacher';
+            }
+        }
+
+        async function loadTeacherClasses() {
+            try {
+                const profileRes = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+                const teacher = await profileRes.json();
+                const teacherBranch = teacher.branch;
+                
+                const res = await fetch(`${API_BASE}/classes`, { credentials: 'include' });
+                const classes = await res.json();
+                
+                const tbody = document.getElementById('classesTableBody');
+                if (!Array.isArray(classes)) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">No classes found</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                for (const cls of classes) {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td><strong>${cls.name}</strong></td>
+                        <td>${cls._id.slice(-6)}</td>
+                        <td>0</td>
+                        <td>${cls.branch || 'N/A'}</td>
+                        <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
+                        <td>
+                            <button class="action-btn-r btn-primary" onclick="loadAttendance('${cls._id}')">📋 Attendance</button>
+                            <button class="action-btn-r btn-success" onclick="loadMarks('${cls._id}')">✏️ Marks</button>
+                        </td>
+                    `;
+                }
+            } catch (err) {
+                console.error('Classes load error:', err);
+                document.getElementById('classesTableBody').innerHTML = 
+                    '<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Failed to load classes</td></tr>';
+            }
+        }
+
+        async function createTeacherClass() {
+            const className = document.getElementById('className')?.value.trim();
+            const branch = document.getElementById('classBranch')?.value;
+            const semester = document.getElementById('classSemester')?.value;
+            
+            if (!className || !branch || !semester) {
+                showMessage('Please fill class name, branch & semester', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('createClassBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/classes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ 
+                        name: className, 
+                        branch, 
+                        semester 
+                    })
+                });
+                
+                const data = await res.json();
+                if (data.success || res.ok) {
+                    showMessage(`✅ Class "${className}" created!`, 'success');
+                    document.getElementById('className').value = '';
+                    document.getElementById('classBranch').value = '';
+                    document.getElementById('classSemester').value = '';
+                    document.getElementById('classSubjectsPreview').innerHTML = 'Class created successfully!';
+                    btn.disabled = true;
+                    loadTeacherClasses();
+                } else {
+                    showMessage(data.message || 'Failed to create class', 'error');
+                }
+            } catch (err) {
+                showMessage('Network error: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '➕ Create Class';
+            }
+        }
+
+        // Placeholder functions
+        function loadAttendance(classId) {
+            showMessage('📋 Attendance feature coming soon!', 'info');
+            console.log('Attendance for:', classId);
+        }
+
+        function loadMarks(classId) {
+            showMessage('✏️ Marks feature coming soon!', 'info');
+            console.log('Marks for:', classId);
+        }
+
+        // 🔥 MAIN INITIALIZATION - PERFECT CASCADE
+        async function initTeacherDashboard() {
+            console.log('🔥 Initializing Teacher Dashboard');
+            
+            await loadTeacherProfile();
+            await loadTeacherBranches();
+            await loadTeacherClasses();
+            
+            // 🔥 CRITICAL EVENT LISTENERS
+            const branchSelect = document.getElementById('classBranch');
+            const semesterSelect = document.getElementById('classSemester');
+            
+            if (branchSelect) {
+                branchSelect.addEventListener('change', (e) => {
+                    console.log('👆 Branch changed:', e.target.value);
+                    updateClassSemesters(e.target.value);
+                });
+                console.log('✅ Branch listener added');
+            }
+            
+            if (semesterSelect) {
+                semesterSelect.addEventListener('change', () => {
+                    console.log('👆 Semester changed');
+                    updateClassSubjectsPreview();
+                });
+                console.log('✅ Semester listener added');
+            }
+            
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                try {
+                    await fetch(`${API_BASE}/logout`, { credentials: 'include' });
+                    window.location.href = '/index.html';
+                } catch (err) {
+                    window.location.href = '/index.html';
+                }
+            });
+            
+            console.log('✅ Teacher dashboard fully initialized');
+        }
+
+        // 🔥 START EVERYTHING
+        document.addEventListener('DOMContentLoaded', initTeacherDashboard);
+    </script>
 </body>
 </html>
