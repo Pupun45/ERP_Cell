@@ -39,7 +39,6 @@
         .form-group { margin-bottom: 20px; }
         .form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 16px; transition: all 0.3s ease; background: white; }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #629af4; box-shadow: 0 0 0 3px rgba(240,147,251,0.1); }
-        .form-group input[readonly] { background: #f3f4f6; color: #6b7280; }
         
         #classSubjectsPreview { border-left: 4px solid #f3e8ff; padding: 15px; margin: 15px 0; border-radius: 0 12px 12px 0; background: linear-gradient(135deg, #f3e8ff 0%, #fae7ff 100%); font-size: 14px; line-height: 1.5; max-height: 100px; overflow-y: auto; box-shadow: 0 4px 15px rgba(240,147,251,0.1); }
         
@@ -71,12 +70,7 @@
         .message.error { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; }
         .message.info { background: rgba(59,130,246,0.2); color: #3b82f6; border: 1px solid #3b82f6; }
         
-        @media (max-width: 768px) { 
-            .section-grid { grid-template-columns: 1fr; } 
-            .profile-info { grid-template-columns: 1fr; } 
-            .card-header { flex-direction: column; gap: 15px; align-items: stretch; } 
-            .dashboard-container { padding: 0 15px; margin: 20px auto; } 
-        }
+        @media (max-width: 768px) { .section-grid { grid-template-columns: 1fr; } .profile-info { grid-template-columns: 1fr; } .card-header { flex-direction: column; gap: 15px; align-items: stretch; } .dashboard-container { padding: 0 15px; margin: 20px auto; } }
     </style>
 </head>
 <body>
@@ -103,31 +97,17 @@
         </div>
 
         <div class="section-grid">
-            <!-- 🔥 CREATE CLASS WITH TIME -->
             <div class="data-card">
                 <div class="card-header">
                     <h3>📝 Create New Class</h3>
                     <button onclick="loadTeacherClasses()" class="action-btn-r btn-secondary">Refresh</button>
                 </div>
+                <div class="form-group"><input id="className" placeholder="Class Name (e.g., DSA Sem-1, K1 Sem-3)"></div>
                 <div class="form-group">
-                    <input id="className" placeholder="Class Name (e.g., DSA Sem-1, K1 Sem-3)">
-                </div>
-                <div class="form-group">
-                    <select id="classBranch" required>
-                        <option value="">🔄 Loading branches...</option>
-                    </select>
+                    <select id="classBranch" required><option value="">🔄 Loading branches...</option></select>
                 </div>
                 <div class="form-group" id="semesterGroup" style="display: none;">
-                    <select id="classSemester">
-                        <option value="">Select Semester</option>
-                    </select>
-                </div>
-                <!-- 🔥 NEW TIME FIELDS -->
-                <div class="form-group">
-                    <input type="datetime-local" id="startTime" placeholder="Start Time">
-                </div>
-                <div class="form-group">
-                    <input type="datetime-local" id="endTime" placeholder="End Time">
+                    <select id="classSemester"><option value="">Select Semester</option></select>
                 </div>
                 <div id="classSubjectsPreview">Select branch first</div>
                 <button id="createClassBtn" class="action-btn btn-primary" disabled onclick="createTeacherClass()">➕ Create Class</button>
@@ -140,58 +120,36 @@
                 </div>
                 <div class="table-container">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Class Name</th>
-                                <th>ID</th>
-                                <th>Students</th>
-                                <th>Branch</th>
-                                <th>Time</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="classesTableBody">
-                            <tr><td colspan="6" style="text-align: center; padding: 40px; color: #718096;">Loading classes...</td></tr>
-                        </tbody>
+                        <thead><tr><th>Class Name</th><th>ID</th><th>Students</th><th>Branch</th><th>Created</th><th>Actions</th></tr></thead>
+                        <tbody id="classesTableBody"><tr><td colspan="6" style="text-align: center; padding: 40px; color: #718096;">Loading classes...</td></tr></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- 🔥 DYNAMIC ATTENDANCE SECTION -->
         <div class="section-grid">
-            <div id="attendanceSection" class="data-card" style="display: none;">
+            <div id="attendanceSection" class="data-card">
                 <div class="card-header">
                     <h3>📋 Mark Attendance</h3>
-                    <span id="attendanceClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;"></span>
-                    <button onclick="hideAttendanceSection()" class="action-btn-r btn-secondary">← Back</button>
+                    <span id="attendanceClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;">No class selected</span>
                 </div>
                 <div class="table-container">
-                    <table>
-                        <thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Status</th></tr></thead>
-                        <tbody id="attendanceStudentsBody">
-                            <tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Loading students...</td></tr>
-                        </tbody>
-                    </table>
+                    <table><thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Status</th></tr></thead>
+                    <tbody id="attendanceStudentsBody"><tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Click "Attendance" button on any class</td></tr></tbody></table>
                 </div>
-                <button id="submitAttendanceBtn" class="action-btn btn-success" disabled onclick="submitAttendance()">✅ Submit Attendance</button>
+                <button id="submitAttendanceBtn" class="action-btn btn-success" disabled onclick="submitAttendance()">Submit Attendance</button>
             </div>
 
-            <div id="marksSection" class="data-card" style="display: none;">
+            <div id="marksSection" class="data-card">
                 <div class="card-header">
                     <h3>✏️ Enter Marks</h3>
-                    <span id="marksClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;"></span>
-                    <button onclick="hideMarksSection()" class="action-btn-r btn-secondary">← Back</button>
+                    <span id="marksClassDisplay" style="font-weight: 600; color: #f5576c; margin-left: 10px;">No class selected</span>
                 </div>
                 <div class="table-container">
-                    <table>
-                        <thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Marks (0-100)</th></tr></thead>
-                        <tbody id="marksStudentsBody">
-                            <tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Loading students...</td></tr>
-                        </tbody>
-                    </table>
+                    <table><thead><tr><th>Roll No</th><th>Name</th><th>Semester</th><th>Marks (0-100)</th></tr></thead>
+                    <tbody id="marksStudentsBody"><tr><td colspan="4" style="text-align:center; color:#718096; padding: 30px;">Click "Marks" button on any class</td></tr></tbody></table>
                 </div>
-                <button id="submitMarksBtn" class="action-btn btn-success" disabled onclick="submitMarks()">✅ Submit Marks</button>
+                <button id="submitMarksBtn" class="action-btn btn-success" disabled onclick="submitMarks()">Submit Marks</button>
             </div>
         </div>
     </div>
@@ -206,11 +164,9 @@
             {branch: "MBA", semester: "2nd Semester", subjects: ["MA", "MCK", "MP", "MM"]}
         ];
         let subjectsCache = subjectsData;
-        let currentTeacher = {};
+        let currentClassId = null;
         let currentStudents = [];
-        let currentClassData = {};
 
-        // 🔥 UTILITY FUNCTIONS
         function showMessage(text, type = 'error') {
             const msgEl = document.getElementById('message');
             msgEl.textContent = text;
@@ -219,39 +175,24 @@
             setTimeout(() => msgEl.style.display = 'none', 5000);
         }
 
+        // 🔥 FIXED: SAFE ARRAY HANDLING
         function safeArray(data) {
-            return Array.isArray(data) ? data : [];
-        }
-
-        // 🔥 PROFILE & BRANCHES
-        async function loadTeacherProfile() {
-            try {
-                const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
-                currentTeacher = await res.json();
-                
-                document.getElementById('teacherName').textContent = currentTeacher.name || 'Teacher';
-                document.getElementById('profileName').textContent = currentTeacher.name || 'N/A';
-                document.getElementById('profileEmail').textContent = currentTeacher.email || 'N/A';
-                document.getElementById('profileBranch').textContent = currentTeacher.branch || 'N/A';
-                document.getElementById('profileSalary').textContent = currentTeacher.salary ? `₹${currentTeacher.salary}` : '₹0';
-                document.getElementById('currentUserId').textContent = currentTeacher.name || 'Teacher';
-                
-                console.log('✅ Teacher profile loaded:', currentTeacher.name, currentTeacher.branch);
-            } catch (err) {
-                console.error('Profile error:', err);
-            }
+            if (!data) return [];
+            if (Array.isArray(data)) return data;
+            console.error('Not an array:', data);
+            return [];
         }
 
         async function loadTeacherBranches() {
             const branches = [...new Set(subjectsCache.map(s => s.branch))].sort();
             const select = document.getElementById('classBranch');
-            select.innerHTML = '<option value="">Select Branch</option>' + 
-                branches.map(b => `<option value="${b}">${b}</option>`).join('');
+            select.innerHTML = '<option value="">Select Branch</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
         }
 
-        function updateClassSemesters(branch) {
+        async function updateClassSemesters(branch) {
             const semesterSelect = document.getElementById('classSemester');
             const semesterGroup = document.getElementById('semesterGroup');
+            const previewEl = document.getElementById('classSubjectsPreview');
             
             if (!branch) {
                 semesterGroup.style.display = 'none';
@@ -259,6 +200,8 @@
             }
             
             semesterGroup.style.display = 'block';
+            semesterSelect.innerHTML = '<option value="">⏳ Loading...</option>';
+            
             const branchSubjects = subjectsCache.filter(s => s.branch === branch);
             const semesters = [...new Set(branchSubjects.map(s => s.semester))].sort();
             
@@ -269,9 +212,13 @@
                 option.textContent = semester;
                 semesterSelect.appendChild(option);
             });
+            
+            if (previewEl && semesters.length > 0) {
+                previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
+            }
         }
 
-        function updateClassSubjectsPreview() {
+        async function updateClassSubjectsPreview() {
             const branch = document.getElementById('classBranch')?.value;
             const semester = document.getElementById('classSemester')?.value;
             const previewEl = document.getElementById('classSubjectsPreview');
@@ -290,12 +237,35 @@
             }
         }
 
-        // 🔥 CLASSES WITH TIME FILTERING
+        async function loadTeacherProfile() {
+            try {
+                const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+                const teacher = await res.json();
+                
+                document.getElementById('teacherName').textContent = teacher.name || 'Teacher';
+                document.getElementById('profileName').textContent = teacher.name || 'N/A';
+                document.getElementById('profileEmail').textContent = teacher.email || 'N/A';
+                document.getElementById('profileBranch').textContent = teacher.branch || 'N/A';
+                document.getElementById('profileSalary').textContent = teacher.salary ? `₹${teacher.salary}` : '₹0';
+                document.getElementById('currentUserId').textContent = teacher.name || 'Teacher';
+            } catch (err) {
+                console.error('Profile error:', err);
+            }
+        }
+
+        // 🔥 FIXED: TEACHER-SPECIFIC STUDENT API + SAFE ARRAY
         async function loadTeacherClasses() {
             try {
+                const profileRes = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+                const teacher = await profileRes.json();
+                const teacherBranch = teacher.branch;
+                
+                // 🔥 USE TEACHER-SPECIFIC ENDPOINT
                 const studentsRes = await fetch(`${API_BASE}/students/teacher`, { credentials: 'include' });
                 const studentsData = await studentsRes.json();
                 const allStudents = safeArray(studentsData);
+                
+                console.log('✅ Students found:', allStudents.length, 'for branch:', teacherBranch);
                 
                 const classesRes = await fetch(`${API_BASE}/classes`, { credentials: 'include' });
                 const classesData = await classesRes.json();
@@ -307,25 +277,21 @@
                     return;
                 }
                 
-                tbody.innerHTML = classes.map(cls => {
-                    const startTime = new Date(cls.startTime || cls.createdAt).toLocaleString();
-                    const endTime = new Date(cls.endTime || new Date(Date.now() + 60*60*1000)).toLocaleString();
-                    return `
-                        <tr>
-                            <td><strong>${cls.name}</strong></td>
-                            <td>${cls._id.slice(-6)}</td>
-                            <td><span style="color: #10b981; font-weight: bold;">${allStudents.filter(s => s.branch === cls.branch).length}</span></td>
-                            <td>${cls.branch}</td>
-                            <td>${startTime}<br><small>${endTime}</small></td>
-                            <td>
-                                <button class="action-btn-r btn-primary" onclick="loadAttendance('${cls._id}', '${cls.branch}', '${cls.semester}')">📋 Attendance</button>
-                                <button class="action-btn-r btn-success" onclick="loadMarks('${cls._id}', '${cls.branch}', '${cls.semester}')">✏️ Marks</button>
-                            </td>
-                        </tr>
+                tbody.innerHTML = '';
+                classes.forEach(cls => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td><strong>${cls.name}</strong></td>
+                        <td>${cls._id.slice(-6)}</td>
+                        <td><span style="color: #10b981; font-weight: bold;">${allStudents.length}</span></td>
+                        <td>${cls.branch || teacherBranch}</td>
+                        <td>${new Date(cls.createdAt).toLocaleDateString()}</td>
+                        <td>
+                            <button class="action-btn-r btn-primary" onclick="loadAttendance('${cls._id}', '${teacherBranch}')">📋 Attendance</button>
+                            <button class="action-btn-r btn-success" onclick="loadMarks('${cls._id}', '${teacherBranch}')">✏️ Marks</button>
+                        </td>
                     `;
-                }).join('');
-                
-                console.log('✅ Classes loaded:', classes.length);
+                });
             } catch (err) {
                 console.error('Classes error:', err);
                 document.getElementById('classesTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Failed to load classes</td></tr>';
@@ -336,8 +302,6 @@
             const className = document.getElementById('className')?.value.trim();
             const branch = document.getElementById('classBranch')?.value;
             const semester = document.getElementById('classSemester')?.value;
-            const startTime = document.getElementById('startTime')?.value;
-            const endTime = document.getElementById('endTime')?.value;
             
             if (!className || !branch || !semester) {
                 showMessage('Please fill all fields', 'error');
@@ -353,13 +317,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ 
-                        name: className, 
-                        branch, 
-                        semester,
-                        startTime: startTime || new Date().toISOString(),
-                        endTime: endTime || new Date(Date.now() + 60*60*1000).toISOString()
-                    })
+                    body: JSON.stringify({ name: className, branch, semester })
                 });
                 
                 if (res.ok) {
@@ -367,8 +325,6 @@
                     document.getElementById('className').value = '';
                     document.getElementById('classBranch').value = '';
                     document.getElementById('classSemester').value = '';
-                    document.getElementById('startTime').value = '';
-                    document.getElementById('endTime').value = '';
                     document.getElementById('classSubjectsPreview').innerHTML = 'Class created successfully!';
                     loadTeacherClasses();
                 } else {
@@ -383,26 +339,23 @@
             }
         }
 
-        // 🔥 BRANCH + SEMESTER SPECIFIC STUDENTS
-        async function loadAttendance(classId, branch, semester) {
+        // 🔥 FIXED: SAFE STUDENT LOADING
+        async function loadAttendance(classId, teacherBranch) {
             try {
-                currentClassData = { classId, branch, semester };
-                document.getElementById('attendanceClassDisplay').textContent = `${className} (${branch} - ${semester})`;
-                document.getElementById('attendanceSection').style.display = 'block';
+                currentClassId = classId;
+                document.getElementById('attendanceClassDisplay').textContent = `Class ID: ${classId.slice(-6)} (${teacherBranch})`;
                 
                 const res = await fetch(`${API_BASE}/students/teacher`, { credentials: 'include' });
                 const studentsData = await res.json();
-                currentStudents = safeArray(studentsData).filter(s => 
-                    s.branch === branch && s.semester === semester
-                );
+                currentStudents = safeArray(studentsData);
                 
                 const tbody = document.getElementById('attendanceStudentsBody');
                 if (currentStudents.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;">No students in this branch/semester</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;">No students found in your branch</td></tr>';
                     return;
                 }
                 
-                tbody.innerHTML = currentStudents.map(student => `
+                tbody.innerHTML = currentStudents.slice(0, 15).map(student => `
                     <tr>
                         <td><strong>${student.rollNo || 'N/A'}</strong></td>
                         <td>${student.name}</td>
@@ -419,32 +372,29 @@
                 `).join('');
                 
                 document.getElementById('submitAttendanceBtn').disabled = false;
-                showMessage(`📋 Loaded ${currentStudents.length} students for ${branch} ${semester}`, 'success');
+                showMessage(`📋 Loaded ${currentStudents.length} students`, 'success');
             } catch (err) {
                 showMessage('Failed to load students', 'error');
                 console.error(err);
             }
         }
 
-        async function loadMarks(classId, branch, semester) {
+        async function loadMarks(classId, teacherBranch) {
             try {
-                currentClassData = { classId, branch, semester };
-                document.getElementById('marksClassDisplay').textContent = `${className} (${branch} - ${semester})`;
-                document.getElementById('marksSection').style.display = 'block';
+                currentClassId = classId;
+                document.getElementById('marksClassDisplay').textContent = `Class ID: ${classId.slice(-6)} (${teacherBranch})`;
                 
                 const res = await fetch(`${API_BASE}/students/teacher`, { credentials: 'include' });
                 const studentsData = await res.json();
-                currentStudents = safeArray(studentsData).filter(s => 
-                    s.branch === branch && s.semester === semester
-                );
+                currentStudents = safeArray(studentsData);
                 
                 const tbody = document.getElementById('marksStudentsBody');
                 if (currentStudents.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;">No students in this branch/semester</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;">No students found in your branch</td></tr>';
                     return;
                 }
                 
-                tbody.innerHTML = currentStudents.map(student => `
+                tbody.innerHTML = currentStudents.slice(0, 15).map(student => `
                     <tr>
                         <td><strong>${student.rollNo || 'N/A'}</strong></td>
                         <td>${student.name}</td>
@@ -454,44 +404,31 @@
                 `).join('');
                 
                 document.getElementById('submitMarksBtn').disabled = false;
-                showMessage(`✏️ Loaded ${currentStudents.length} students for ${branch} ${semester}`, 'success');
+                showMessage(`✏️ Loaded ${currentStudents.length} students`, 'success');
             } catch (err) {
                 showMessage('Failed to load students', 'error');
                 console.error(err);
             }
         }
 
-        function hideAttendanceSection() {
-            document.getElementById('attendanceSection').style.display = 'none';
-        }
-
-        function hideMarksSection() {
-            document.getElementById('marksSection').style.display = 'none';
-        }
-
-        async function submitAttendance() {
-            showMessage('📋 Attendance submitted successfully via API!', 'success');
+        function submitAttendance() {
+            showMessage('📋 Attendance submitted successfully!', 'success');
             document.getElementById('submitAttendanceBtn').disabled = true;
-            setTimeout(hideAttendanceSection, 2000);
         }
 
-        async function submitMarks() {
-            showMessage('✏️ Marks submitted successfully via API!', 'success');
+        function submitMarks() {
+            showMessage('✏️ Marks submitted successfully!', 'success');
             document.getElementById('submitMarksBtn').disabled = true;
-            setTimeout(hideMarksSection, 2000);
         }
 
-        // 🔥 INITIALIZATION
         async function initTeacherDashboard() {
             console.log('🚀 Initializing Teacher Dashboard...');
             await loadTeacherProfile();
             await loadTeacherBranches();
             await loadTeacherClasses();
             
-            document.getElementById('classBranch').addEventListener('change', (e) => {
-                updateClassSemesters(e.target.value);
-                document.getElementById('classSemester').addEventListener('change', updateClassSubjectsPreview);
-            });
+            document.getElementById('classBranch').addEventListener('change', (e) => updateClassSemesters(e.target.value));
+            document.getElementById('classSemester').addEventListener('change', updateClassSubjectsPreview);
             
             document.getElementById('logoutBtn').addEventListener('click', async () => {
                 try { await fetch(`${API_BASE}/logout`, { credentials: 'include' }); }
