@@ -37,37 +37,42 @@ function detectDashboardType() {
   return 'unknown';
 }
 
-// 🔥 AUTO-LOAD BRANCHES (ALL PAGES)
+// 🔥 NEW: Load branches FROM SUBJECTS API (CSE, MBA detected automatically)
 async function loadBranches() {
   try {
-    const res = await fetch(`${API_BASE}/branches`, { credentials: 'include' });
-    const branches = await res.json();
+    const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
+    const subjects = await res.json();
+    const branches = [...new Set(subjects.map(s => s.branch))].sort();
     
     const teacherBranch = document.getElementById('teacherBranch');
     const studentBranch = document.getElementById('studentBranch');
     const classBranch = document.getElementById('classBranch');
     const subjectBranch = document.getElementById('subjectBranch');
     
-    [teacherBranch, studentBranch, classBranch].forEach(dropdown => {
+    [teacherBranch, studentBranch, classBranch, subjectBranch].forEach(dropdown => {
       if (dropdown && !dropdown.hasAttribute('data-loaded')) {
-        dropdown.innerHTML = '<option value="">Select Branch</option>';
-        branches.forEach(branch => {
-          const option = document.createElement('option');
-          option.value = branch;
-          option.textContent = branch;
-          dropdown.appendChild(option);
-        });
+        if (dropdown.tagName === 'SELECT') {
+          dropdown.innerHTML = '<option value="">Select Branch</option>' + 
+            branches.map(branch => `<option value="${branch}">${branch}</option>`).join('');
+        }
         dropdown.setAttribute('data-loaded', 'true');
       }
     });
     
-    console.log('✅ Branches auto-loaded:', branches);
+    // Datalist for subject input
+    const datalist = document.getElementById('branchSuggestions');
+    if (datalist) datalist.innerHTML = branches.map(b => `<option value="${b}">`).join('');
+    
+    console.log('✅ Dynamic branches loaded:', branches);
+    return branches;
   } catch (err) {
     console.error('❌ Branches load failed:', err);
+    return [];
   }
 }
 
-// 🔥 TEACHER SUBJECTS PREVIEW
+
+// 🔥 FIXED: Teacher shows ALL subjects for branch (not just 1st sem)
 async function updateTeacherSubjectsPreview() {
   const branch = document.getElementById('teacherBranch')?.value;
   const previewEl = document.getElementById('teacherSubjectsPreview');
@@ -75,22 +80,22 @@ async function updateTeacherSubjectsPreview() {
   if (!branch || !previewEl) return;
   
   previewEl.className = 'subjects-preview loading';
-  previewEl.innerHTML = '<strong>📚 Subjects:</strong> <span>Loading...</span>';
+  previewEl.innerHTML = '<strong>📚 Subjects:</strong> <span>Loading all semesters...</span>';
   
   try {
-    const backendSemester = SEMESTER_MAP['1st'];
-    const res = await fetch(`${API_BASE}/subjects/${branch}/${backendSemester}`, { credentials: 'include' });
-    const data = await res.json();
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
+    const subjectsData = await res.json();
     
-    if (data.subjects?.length > 0) {
+    const allSubjects = subjectsData.flatMap(s => s.subjects || []);
+    if (allSubjects.length > 0) {
       previewEl.className = 'subjects-preview success';
       previewEl.innerHTML = `
-        <strong>📚 ${data.count || data.subjects.length} subjects:</strong> 
-        ${data.subjects.slice(0, 3).join(', ')}${data.subjects.length > 3 ? ` +${data.subjects.length-3} more` : ''}
+        <strong>📚 ${allSubjects.length} subjects:</strong> 
+        ${allSubjects.slice(0, 3).join(', ')}${allSubjects.length > 3 ? ` +${allSubjects.length-3} more` : ''}
       `;
     } else {
       previewEl.className = 'subjects-preview empty';
-      previewEl.innerHTML = '<strong>📚 No subjects</strong> for 1st semester';
+      previewEl.innerHTML = `<strong>📚 No subjects</strong> for ${branch}`;
     }
   } catch (err) {
     previewEl.className = 'subjects-preview empty';
@@ -98,7 +103,8 @@ async function updateTeacherSubjectsPreview() {
   }
 }
 
-// 🔥 STUDENT CASCADE - Branch → Semesters → Subjects
+
+// 🔥 FIXED: Student Branch → Semesters (CSE shows 1st+3rd)
 async function updateStudentSemesters(branch) {
   const semesterSelect = document.getElementById('studentSemester');
   if (!semesterSelect || !branch) return;
@@ -107,20 +113,14 @@ async function updateStudentSemesters(branch) {
   semesterSelect.innerHTML = '<option value="">⏳ Loading semesters...</option>';
   
   try {
-    const res = await fetch(`${API_BASE}/subjects/${branch}`, { credentials: 'include' });
-    const data = await res.json();
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
+    const subjects = await res.json();
     
-    let semesters = [];
-    if (Array.isArray(data)) {
-      semesters = data.map(item => item.semester);
-    } else if (data && data.semester) {
-      semesters = [data.semester];
-    }
-    
+    const semesters = [...new Set(subjects.map(item => item.semester))].sort();
     semesterSelect.innerHTML = '<option value="">Select Semester</option>';
     
     semesters.forEach(semester => {
-      const frontendValue = semester.replace(' Semester', '').replace('All', '1st');
+      const frontendValue = semester.replace(' Semester', '');
       const option = document.createElement('option');
       option.value = frontendValue;
       option.textContent = semester;
@@ -128,11 +128,13 @@ async function updateStudentSemesters(branch) {
     });
     
     semesterSelect.disabled = false;
+    console.log(`✅ ${branch} semesters:`, semesters);
   } catch (err) {
-    semesterSelect.innerHTML = '<option value="">Error loading semesters</option>';
+    semesterSelect.innerHTML = '<option value="">No semesters found</option>';
     semesterSelect.disabled = false;
   }
 }
+
 
 async function updateStudentSubjectsPreview() {
   const branch = document.getElementById('studentBranch')?.value;
@@ -164,6 +166,9 @@ async function updateStudentSubjectsPreview() {
     previewEl.innerHTML = '<strong>📚 Error:</strong> Cannot load subjects';
   }
 }
+// 🔥 GLOBAL CACHE (Add after SEMESTER_MAP)
+const branchSemestersCache = {};
+const branchSubjectsCache = {};
 
 // 🔥 SUBJECT CREATE PREVIEW
 async function updateSubjectPreview() {
@@ -852,15 +857,25 @@ async function initAdminDashboard() {
   document.getElementById('createStudentForm')?.addEventListener('submit', createStudent);
   
   // Preview events
-  document.getElementById('teacherBranch')?.addEventListener('change', updateTeacherSubjectsPreview);
-  document.getElementById('studentBranch')?.addEventListener('change', (e) => {
-    updateStudentSemesters(e.target.value);
-    document.getElementById('studentSemester').value = '';
-  });
-  document.getElementById('studentSemester')?.addEventListener('change', updateStudentSubjectsPreview);
-  document.getElementById('subjectBranch')?.addEventListener('input', updateSubjectPreview);
-  document.getElementById('subjectSemester')?.addEventListener('change', updateSubjectPreview);
-  document.getElementById('subjectNames')?.addEventListener('input', updateSubjectPreview);
+  // In initAdminDashboard(), REPLACE this block:
+document.getElementById('teacherBranch')?.addEventListener('change', () => {
+  updateTeacherSubjectsPreview();
+  const semesterSelect = document.getElementById('teacherSemester');
+  if (semesterSelect) semesterSelect.style.display = 'block';
+});
+
+document.getElementById('studentBranch')?.addEventListener('change', (e) => {
+  updateStudentSemesters(e.target.value);
+  document.getElementById('studentSemester').value = '';
+});
+
+document.getElementById('studentSemester')?.addEventListener('change', updateStudentSubjectsPreview);
+
+// ADD Subject form dynamic semester:
+document.getElementById('subjectBranch')?.addEventListener('input', (e) => {
+  updateStudentSemesters(e.target.value); // Reuse for subject form too
+});
+
   
   // Refresh buttons
   document.getElementById('refreshSubjectsBtn')?.addEventListener('click', loadSubjectsTable);
