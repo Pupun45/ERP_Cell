@@ -756,7 +756,7 @@ async function updateClassSemesters(branch) {
   const previewEl = document.getElementById('classSubjectsPreview');
   
   if (!semesterSelect || !branch) {
-    semesterSelect.style.display = 'none';
+    if (semesterSelect) semesterSelect.style.display = 'none';
     return;
   }
   
@@ -764,13 +764,13 @@ async function updateClassSemesters(branch) {
   semesterSelect.disabled = true;
   semesterSelect.innerHTML = '<option value="">⏳ Loading...</option>';
   
-  // 🔥 TEACHER FALLBACK: Hardcoded semesters
-  const fallbackSemesters = ['1st Semester', '2nd Semester', '3rd Semester', '4th Semester'];
-  
-  try {
-    semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+  // Use cached data first
+  if (subjectsCache && Array.isArray(subjectsCache)) {
+    const branchSubjects = subjectsCache.filter(s => s.branch === branch);
+    const semesters = [...new Set(branchSubjects.map(s => s.semester))].sort();
     
-    fallbackSemesters.forEach(semester => {
+    semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+    semesters.forEach(semester => {
       const option = document.createElement('option');
       option.value = semester;
       option.textContent = semester;
@@ -778,16 +778,33 @@ async function updateClassSemesters(branch) {
     });
     
     semesterSelect.disabled = false;
-    previewEl.innerHTML = `<strong>✅ ${fallbackSemesters.length} semesters:</strong> ${fallbackSemesters.slice(0,2).join(', ')}...`;
-    
+    previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
+    return;
+  }
+  
+  // API fallback (might 403)
+  try {
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
+    if (res.ok) {
+      const subjects = await res.json();
+      const semesters = [...new Set(subjects.map(s => s.semester))].sort();
+      
+      semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+      semesters.forEach(semester => {
+        const option = document.createElement('option');
+        option.value = semester;
+        option.textContent = semester;
+        semesterSelect.appendChild(option);
+      });
+      
+      semesterSelect.disabled = false;
+      previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
+    }
   } catch (err) {
-    console.warn('Teacher semesters failed:', err);
-    semesterSelect.innerHTML = '<option value="">Teacher access restricted</option>';
+    semesterSelect.innerHTML = '<option value="">Error loading semesters</option>';
     semesterSelect.disabled = true;
-    previewEl.innerHTML = '<strong>⚠️ Contact admin for subjects</strong>';
   }
 }
-
 
 async function updateClassSubjectsPreview() {
   const branch = document.getElementById('classBranch')?.value;
@@ -796,10 +813,25 @@ async function updateClassSubjectsPreview() {
   
   if (!branch || !semester || !previewEl) return;
   
-  previewEl.innerHTML = '🔄 Loading subjects...';
+  // Use cache first
+  if (subjectsCache) {
+    const subjectData = subjectsCache.find(s => s.branch === branch && s.semester === semester);
+    if (subjectData?.subjects) {
+      const subjects = subjectData.subjects;
+      previewEl.innerHTML = `
+        <strong>✅ ${subjects.length} subjects:</strong><br>
+        <small>${subjects.join(', ')}</small>
+      `;
+      document.getElementById('createClassBtn').disabled = false;
+      return;
+    }
+  }
   
+  // API call
   try {
-    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}&semester=${encodeURIComponent(semester)}`, { credentials: 'include' });
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}&semester=${encodeURIComponent(semester)}`, { 
+      credentials: 'include' 
+    });
     const data = await res.json();
     
     if (data.length > 0 && data[0]?.subjects) {
@@ -819,22 +851,39 @@ async function updateClassSubjectsPreview() {
   }
 }
 
+
+// 🔥 GLOBAL SUBJECTS CACHE
+let subjectsCache = null;
+
 async function loadTeacherBranches() {
   try {
-    // 🔥 TEACHER-SAFE: Skip 403 subjects API
-    const fallbackBranches = ['CSE', 'ECE', 'MECH', 'MBA', 'CIVIL'];
+    const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
     
+    if (res.ok) {
+      subjectsCache = await res.json();
+      if (Array.isArray(subjectsCache)) {
+        const branches = [...new Set(subjectsCache.map(s => s.branch))].sort();
+        const select = document.getElementById('classBranch');
+        if (select) {
+          select.innerHTML = '<option value="">Select Branch</option>' + 
+            branches.map(b => `<option value="${b}">${b}</option>`).join('');
+          console.log('✅ API branches:', branches);
+        }
+        return;
+      }
+    }
+    
+    // Fallback if 403
+    const fallback = ['CSE', 'MBA'];
     const select = document.getElementById('classBranch');
     if (select) {
       select.innerHTML = '<option value="">Select Branch</option>' + 
-        fallbackBranches.map(b => `<option value="${b}">${b}</option>`).join('');
-      console.log('✅ Teacher branches loaded (fallback):', fallbackBranches);
+        fallback.map(b => `<option value="${b}">${b}</option>`).join('');
     }
   } catch (err) {
-    console.error('Teacher branches failed:', err);
+    console.error('Branches failed:', err);
   }
 }
-
 
 
 
@@ -1138,11 +1187,11 @@ document.getElementById('subjectBranch')?.addEventListener('input', (e) => {
 async function initTeacherDashboard() {
   console.log('🔥 Initializing Teacher Dashboard');
   await loadTeacherProfile();
-  await loadTeacherBranches();
+  await loadTeacherBranches(); 
   await loadTeacherClasses();
   
   // 🔥 EVENT LISTENERS for cascade
-  document.getElementById('classBranch')?.addEventListener('change', (e) => {
+   document.getElementById('classBranch')?.addEventListener('change', (e) => {
     updateClassSemesters(e.target.value);
   });
   document.getElementById('classSemester')?.addEventListener('change', updateClassSubjectsPreview);
