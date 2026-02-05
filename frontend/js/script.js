@@ -70,6 +70,89 @@ async function loadBranches() {
     return [];
   }
 }
+// 🔥 NEW: Teacher Branch → Semesters → Subjects (3-level cascade)
+async function updateTeacherSemesters(branch) {
+  const semesterSelect = document.getElementById('teacherSemester');
+  const previewEl = document.getElementById('teacherSubjectsPreview');
+  
+  if (!semesterSelect || !branch) {
+    if (semesterSelect) semesterSelect.style.display = 'none';
+    return;
+  }
+  
+  semesterSelect.style.display = 'block';
+  semesterSelect.disabled = true;
+  semesterSelect.innerHTML = '<option value="">⏳ Loading semesters...</option>';
+  
+  if (previewEl) {
+    previewEl.className = 'subjects-preview loading';
+    previewEl.innerHTML = '<strong>📚 Subjects:</strong> <span>Loading semesters...</span>';
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
+    const subjects = await res.json();
+    
+    const semesters = [...new Set(subjects.map(item => item.semester))].sort();
+    semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+    
+    semesters.forEach(semester => {
+      const frontendValue = semester.replace(' Semester', '');
+      const option = document.createElement('option');
+      option.value = frontendValue;
+      option.textContent = semester;
+      semesterSelect.appendChild(option);
+    });
+    
+    semesterSelect.disabled = false;
+    
+    if (previewEl && semesters.length > 0) {
+      previewEl.className = 'subjects-preview success';
+      previewEl.innerHTML = `<strong>📚 ${branch}:</strong> <span>${semesters.length} semesters available: ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}</span>`;
+    }
+    
+  } catch (err) {
+    semesterSelect.innerHTML = '<option value="">No semesters found</option>';
+    semesterSelect.disabled = false;
+    if (previewEl) {
+      previewEl.className = 'subjects-preview empty';
+      previewEl.innerHTML = `<strong>📚 ${branch}:</strong> <span>No semesters available</span>`;
+    }
+  }
+}
+
+// 🔥 NEW: Teacher semester change → Show subjects
+async function updateTeacherSubjectsAfterSemester() {
+  const branch = document.getElementById('teacherBranch')?.value;
+  const semester = document.getElementById('teacherSemester')?.value;
+  const previewEl = document.getElementById('teacherSubjectsPreview');
+  
+  if (!branch || !semester || !previewEl) return;
+  
+  previewEl.className = 'subjects-preview loading';
+  previewEl.innerHTML = '<strong>📚 Subjects:</strong> <span>Loading...</span>';
+  
+  try {
+    const backendSemester = SEMESTER_MAP[semester] || `${semester} Semester`;
+    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}&semester=${encodeURIComponent(backendSemester)}`, { credentials: 'include' });
+    const data = await res.json();
+    
+    if (data.length > 0 && data[0]?.subjects?.length > 0) {
+      const subjects = data[0].subjects;
+      previewEl.className = 'subjects-preview success';
+      previewEl.innerHTML = `
+        <strong>📚 ${subjects.length} subjects:</strong> 
+        ${subjects.slice(0, 3).join(', ')}${subjects.length > 3 ? ` +${subjects.length-3} more` : ''}
+      `;
+    } else {
+      previewEl.className = 'subjects-preview empty';
+      previewEl.innerHTML = `<strong>📚 No subjects</strong> for ${semester}`;
+    }
+  } catch (err) {
+    previewEl.className = 'subjects-preview empty';
+    previewEl.innerHTML = '<strong>📚 Error:</strong> Cannot load subjects';
+  }
+}
 
 
 // 🔥 FIXED: Teacher shows ALL subjects for branch (not just 1st sem)
@@ -331,6 +414,7 @@ async function createTeacher(e) {
       email: document.getElementById('teacherEmail').value,
       setDefaultPassword: true,
       branch: document.getElementById('teacherBranch').value,
+      semester: document.getElementById('teacherSemester').value,
       salary: parseInt(document.getElementById('teacherSalary').value) || 0
     };
     
@@ -857,12 +941,12 @@ async function initAdminDashboard() {
   document.getElementById('createStudentForm')?.addEventListener('submit', createStudent);
   
   // Preview events
-  // In initAdminDashboard(), REPLACE this block:
-document.getElementById('teacherBranch')?.addEventListener('change', () => {
-  updateTeacherSubjectsPreview();
-  const semesterSelect = document.getElementById('teacherSemester');
-  if (semesterSelect) semesterSelect.style.display = 'block';
+// 🔥 Teacher: Branch → Semesters → Subjects
+document.getElementById('teacherBranch')?.addEventListener('change', (e) => {
+  updateTeacherSemesters(e.target.value);
 });
+document.getElementById('teacherSemester')?.addEventListener('change', updateTeacherSubjectsAfterSemester);
+
 
 document.getElementById('studentBranch')?.addEventListener('change', (e) => {
   updateStudentSemesters(e.target.value);
