@@ -761,10 +761,10 @@ async function updateClassSemesters(branch) {
   }
   
   semesterSelect.style.display = 'block';
-  semesterSelect.disabled = true;
   semesterSelect.innerHTML = '<option value="">⏳ Loading...</option>';
+  semesterSelect.disabled = true;
   
-  // Use cached data first
+  // Use cached data (FAST, NO API CALL)
   if (subjectsCache && Array.isArray(subjectsCache)) {
     const branchSubjects = subjectsCache.filter(s => s.branch === branch);
     const semesters = [...new Set(branchSubjects.map(s => s.semester))].sort();
@@ -782,29 +782,11 @@ async function updateClassSemesters(branch) {
     return;
   }
   
-  // API fallback (might 403)
-  try {
-    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}`, { credentials: 'include' });
-    if (res.ok) {
-      const subjects = await res.json();
-      const semesters = [...new Set(subjects.map(s => s.semester))].sort();
-      
-      semesterSelect.innerHTML = '<option value="">Select Semester</option>';
-      semesters.forEach(semester => {
-        const option = document.createElement('option');
-        option.value = semester;
-        option.textContent = semester;
-        semesterSelect.appendChild(option);
-      });
-      
-      semesterSelect.disabled = false;
-      previewEl.innerHTML = `<strong>✅ ${semesters.length} semesters:</strong> ${semesters.slice(0,2).join(', ')}${semesters.length > 2 ? '...' : ''}`;
-    }
-  } catch (err) {
-    semesterSelect.innerHTML = '<option value="">Error loading semesters</option>';
-    semesterSelect.disabled = true;
-  }
+  // Fallback
+  semesterSelect.innerHTML = '<option value="">No data available</option>';
+  semesterSelect.disabled = true;
 }
+
 
 async function updateClassSubjectsPreview() {
   const branch = document.getElementById('classBranch')?.value;
@@ -813,10 +795,11 @@ async function updateClassSubjectsPreview() {
   
   if (!branch || !semester || !previewEl) return;
   
-  // Use cache first
-  if (subjectsCache) {
+  // Use cached data ONLY (NO API CALLS)
+  if (subjectsCache && Array.isArray(subjectsCache)) {
     const subjectData = subjectsCache.find(s => s.branch === branch && s.semester === semester);
-    if (subjectData?.subjects) {
+    
+    if (subjectData?.subjects && subjectData.subjects.length > 0) {
       const subjects = subjectData.subjects;
       previewEl.innerHTML = `
         <strong>✅ ${subjects.length} subjects:</strong><br>
@@ -827,65 +810,44 @@ async function updateClassSubjectsPreview() {
     }
   }
   
-  // API call
-  try {
-    const res = await fetch(`${API_BASE}/subjects?branch=${encodeURIComponent(branch)}&semester=${encodeURIComponent(semester)}`, { 
-      credentials: 'include' 
-    });
-    const data = await res.json();
-    
-    if (data.length > 0 && data[0]?.subjects) {
-      const subjects = data[0].subjects;
-      previewEl.innerHTML = `
-        <strong>✅ ${subjects.length} subjects:</strong><br>
-        <small>${subjects.join(', ')}</small>
-      `;
-      document.getElementById('createClassBtn').disabled = false;
-    } else {
-      previewEl.innerHTML = '<strong>❌ No subjects found</strong>';
-      document.getElementById('createClassBtn').disabled = true;
-    }
-  } catch (err) {
-    previewEl.innerHTML = '<strong>❌ Error loading subjects</strong>';
-    document.getElementById('createClassBtn').disabled = true;
-  }
+  previewEl.innerHTML = '<strong>❌ No subjects found</strong>';
+  document.getElementById('createClassBtn').disabled = true;
 }
+
 
 
 // 🔥 GLOBAL SUBJECTS CACHE
 let subjectsCache = null;
-
 async function loadTeacherBranches() {
   try {
+    // Try API first
     const res = await fetch(`${API_BASE}/subjects`, { credentials: 'include' });
-    
     if (res.ok) {
       subjectsCache = await res.json();
-      if (Array.isArray(subjectsCache)) {
-        const branches = [...new Set(subjectsCache.map(s => s.branch))].sort();
-        const select = document.getElementById('classBranch');
-        if (select) {
-          select.innerHTML = '<option value="">Select Branch</option>' + 
-            branches.map(b => `<option value="${b}">${b}</option>`).join('');
-          console.log('✅ API branches:', branches);
-        }
-        return;
-      }
+      console.log('✅ Subjects cached:', subjectsCache.length);
     }
     
-    // Fallback if 403
+    // Populate branches from cache/API
+    const branches = subjectsCache ? 
+      [...new Set(subjectsCache.map(s => s.branch))].sort() : 
+      ['CSE', 'MBA'];
+    
+    const select = document.getElementById('classBranch');
+    if (select) {
+      select.innerHTML = '<option value="">Select Branch</option>' + 
+        branches.map(b => `<option value="${b}">${b}</option>`).join('');
+      console.log('✅ Branches:', branches);
+    }
+  } catch (err) {
+    console.warn('API failed, using fallback branches');
     const fallback = ['CSE', 'MBA'];
     const select = document.getElementById('classBranch');
     if (select) {
       select.innerHTML = '<option value="">Select Branch</option>' + 
         fallback.map(b => `<option value="${b}">${b}</option>`).join('');
     }
-  } catch (err) {
-    console.error('Branches failed:', err);
   }
 }
-
-
 
 // 🔥 TEACHER FUNCTIONS
 async function loadTeacherProfile() {
