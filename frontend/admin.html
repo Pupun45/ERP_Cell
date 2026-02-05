@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="./css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
   <style>
+    label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin: 8px 0 4px 0;
+  font-size: 14px;
+}
+input[required] {
+  border-left: 3px solid #3b82f6;
+}
+
     /* Quick CSS for new buttons */
     .btn-warning { background: #f59e0b; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
     .btn-warning:hover { background: #d97706; }
@@ -100,7 +111,8 @@
         <form id="createTeacherForm">
           <input id="teacherName" placeholder="Full Name" required>
           <input id="teacherEmail" type="email" placeholder="teacher@college.com" required>
-          <input id="teacherPassword" type="password" placeholder="Leave empty for auto-generate">
+          <label>Password <span style="color: #ef4444;">*</span></label>
+<input id="teacherPassword" type="password" placeholder="Enter password" required>
           
           <!-- 🔥 DYNAMIC BRANCH + SEMESTER -->
           <select id="teacherBranch" required>
@@ -130,7 +142,8 @@
         <form id="createStudentForm">
           <input id="studentName" placeholder="Full Name" required>
           <input id="studentEmail" type="email" placeholder="student@college.com" required>
-          <input id="studentPassword" type="password" placeholder="Leave empty for auto-generate">
+          <label>Password <span style="color: #ef4444;">*</span></label>
+<input id="studentPassword" type="password" placeholder="Enter password" required>
           <input id="studentRollNo" placeholder="Roll No (CSE23A001)" required>
           
           <!-- 🔥 DYNAMIC BRANCH + SEMESTER -->

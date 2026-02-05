@@ -408,11 +408,19 @@ async function createTeacher(e) {
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   
+  // 🔥 VALIDATE PASSWORD
+  const password = document.getElementById('teacherPassword').value;
+  if (!password || password.length < 6) {
+    showMessage('Password must be at least 6 characters', 'error');
+    btn.disabled = false;
+    return;
+  }
+  
   try {
     const formData = {
       name: document.getElementById('teacherName').value,
       email: document.getElementById('teacherEmail').value,
-      setDefaultPassword: true,
+      password: password,  // 🔥 REQUIRED - No auto-generate
       branch: document.getElementById('teacherBranch').value,
       semester: document.getElementById('teacherSemester').value,
       salary: parseInt(document.getElementById('teacherSalary').value) || 0
@@ -431,7 +439,6 @@ async function createTeacher(e) {
       }
       url = `${API_BASE}/teachers/${editingId}`;
       method = 'PUT';
-      formData.password = document.getElementById('teacherPassword').value || undefined;
     }
 
     const res = await fetch(url, {
@@ -443,7 +450,7 @@ async function createTeacher(e) {
 
     const data = await res.json();
     if (data.success || res.ok) {
-      showMessage(editingId ? '✅ Teacher updated!' : '✅ Teacher created! Password: teacher123', 'success');
+      showMessage(editingId ? '✅ Teacher updated!' : '✅ Teacher created!', 'success');
       e.target.reset();
       editingId = null;
       editingType = null;
@@ -459,16 +466,25 @@ async function createTeacher(e) {
   }
 }
 
+
 async function createStudent(e) {
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   
+  // 🔥 VALIDATE PASSWORD
+  const password = document.getElementById('studentPassword').value;
+  if (!password || password.length < 6) {
+    showMessage('Password must be at least 6 characters', 'error');
+    btn.disabled = false;
+    return;
+  }
+  
   try {
     const formData = {
       name: document.getElementById('studentName').value,
       email: document.getElementById('studentEmail').value,
-      setDefaultPassword: true,
+      password: password,  // 🔥 REQUIRED - No auto-generate
       rollNo: document.getElementById('studentRollNo').value,
       branch: document.getElementById('studentBranch').value,
       semester: document.getElementById('studentSemester').value
@@ -487,7 +503,6 @@ async function createStudent(e) {
       }
       url = `${API_BASE}/students/${editingId}`;
       method = 'PUT';
-      formData.password = document.getElementById('studentPassword').value || undefined;
     }
 
     const res = await fetch(url, {
@@ -499,7 +514,7 @@ async function createStudent(e) {
 
     const data = await res.json();
     if (data.success || res.ok) {
-      showMessage(editingId ? '✅ Student updated!' : '✅ Student created! Password: student123', 'success');
+      showMessage(editingId ? '✅ Student updated!' : '✅ Student created!', 'success');
       e.target.reset();
       editingId = null;
       editingType = null;
@@ -514,6 +529,7 @@ async function createStudent(e) {
     btn.disabled = false;
   }
 }
+
 
 async function createSubject(e) {
   e.preventDefault();
