@@ -661,6 +661,7 @@ async function loadStudentsTable() {
     tbody.innerHTML = studentsWithSubjects.map(s => `
       <tr>
         <td>${s.name}</td>
+         <td>${s.email}</td> 
         <td>${s.rollNo}</td>
         <td>${s.branch}</td>
         <td>${s.semester}</td>
